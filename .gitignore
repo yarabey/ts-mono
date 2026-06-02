@@ -47,3 +47,15 @@ Thumbs.db
 .claude/settings.local.json
 .nx/polygraph
 .nx/self-healing
+
+# env files
+.env
+.env.*
+!.env.example
+
+# Prisma
+prisma/migrations/**/migration.sql
+
+# Test
+test-results
+playwright-report

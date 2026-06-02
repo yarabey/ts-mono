@@ -1,0 +1,54 @@
+# baby-bot production stack (single self-hosted server).
+#
+# CI copies this file + writes `.env` next to it, then runs:
+#   docker compose pull && docker compose up -d
+# All images are pulled from GHCR; nothing is built on the server.
+#
+# REGISTRY + IMAGE_TAG are appended to `.env` by the deploy workflow; the rest of
+# `.env` comes from the BABY_BOT_ENV secret (see .env.example).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${REGISTRY}/baby-bot-backend:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - babybot-data:/app/data
+
+  web:
+    image: ${REGISTRY}/baby-bot-web:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    depends_on:
+      - backend
+    ports:
+      - '80:80' # ACME HTTP-01 challenge (Let's Encrypt)
+      - '8443:8443' # app (HTTPS)
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  babybot-data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,129 @@
+# Deployment (infra)
+
+Tag-driven CI/CD for ts-mono products. Pushing a version tag builds Docker
+images, pushes them to **GHCR**, and redeploys a `docker compose` stack on a
+single self-hosted server over SSH. The pipeline is **reusable**:
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) is
+product-agnostic; each product adds a small caller workflow + an `infra/<product>/`
+dir.
+
+Currently wired: **baby-bot** (`infra/baby-bot/`,
+[`deploy-baby-bot.yml`](../.github/workflows/deploy-baby-bot.yml)).
+
+## Topology
+
+```
+                          ┌─────────────────── server ───────────────────┐
+  git tag baby-bot-v*     │  caddy (web)  :80  ── ACME HTTP-01            │
+        │                 │               :8443 ── HTTPS app             │
+        ▼                 │                 ├── /api/*, /webhook → backend│
+  GitHub Actions          │                 └── /mini-app/*   → SPA (/srv)│
+   ├ build images         │  backend (NestJS/Fastify) :3100 (internal)   │
+   ├ push → GHCR  ────────┼─▶ pulled by compose                          │
+   └ ssh deploy  ─────────┼─▶ docker compose pull && up -d               │
+                          │  postgres :5432 (internal) + named volumes   │
+                          └───────────────────────────────────────────────┘
+```
+
+- The Telegram bot uses **polling** (outbound only) — no inbound webhook needed.
+- The only inbound traffic is HTTPS on **:8443** (app) and **:80** (Let's Encrypt
+  HTTP-01 challenge only; the CA fixes challenge ports, so :80 must stay open).
+- URL shape: `https://<domain>:8443/api/...`, `https://<domain>:8443/webhook`,
+  `https://<domain>:8443/mini-app/`.
+
+## One-time server bootstrap (Ubuntu 22.04 / 24.04)
+
+```bash
+# 1. Install Docker Engine + compose plugin (official apt repo)
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# 2. Deploy user in the docker group (the CI SSH user)
+sudo adduser --disabled-password --gecos "" deploy
+sudo usermod -aG docker deploy
+sudo mkdir -p /opt/baby-bot && sudo chown deploy:deploy /opt/baby-bot
+
+# 3. Authorize the CI SSH public key
+sudo -u deploy mkdir -p /home/deploy/.ssh && sudo -u deploy chmod 700 /home/deploy/.ssh
+echo "<PASTE CI PUBLIC KEY>" | sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys
+sudo -u deploy chmod 600 /home/deploy/.ssh/authorized_keys
+
+# 4. Firewall: open SSH + the app + ACME
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp      # Let's Encrypt HTTP-01 challenge
+sudo ufw allow 8443/tcp    # app (HTTPS)
+sudo ufw enable
+```
+
+Generate the CI keypair locally and keep the **private** key for the GitHub
+secret, install the **public** key in step 3:
+
+```bash
+ssh-keygen -t ed25519 -C "ci-deploy@ts-mono" -f ./deploy_key -N ""
+# deploy_key      -> DEPLOY_SSH_KEY  (private, GitHub secret)
+# deploy_key.pub  -> authorized_keys (server, step 3)
+```
+
+**DNS:** point an `A` record for your domain at the server's public IP before the
+first deploy (Caddy needs it to reachable on :80 to issue the certificate).
+
+## GitHub Actions secrets (repo → Settings → Secrets and variables → Actions)
+
+CI uses the built-in `GITHUB_TOKEN` for GHCR push and the server-side
+`docker login` — **no PAT needed**.
+
+| Secret | Required | Contents |
+| --- | --- | --- |
+| `DEPLOY_SSH_HOST` | yes | Server IP or hostname |
+| `DEPLOY_SSH_USER` | yes | SSH user in the `docker` group (e.g. `deploy`) |
+| `DEPLOY_SSH_KEY`  | yes | Private SSH key (multi-line OpenSSH PEM) |
+| `DEPLOY_SSH_PORT` | no  | Only if SSH ≠ 22 |
+| `BABY_BOT_ENV`    | yes | The full production `.env` — see [`baby-bot/.env.example`](baby-bot/.env.example). **Do not** include `REGISTRY`/`IMAGE_TAG`; CI appends them. |
+
+## Deploy
+
+```bash
+git tag baby-bot-v1.0.0
+git push origin baby-bot-v1.0.0
+```
+
+The workflow derives the image tag from the git tag (`baby-bot-v1.0.0` → `1.0.0`),
+builds + pushes `baby-bot-backend` and `baby-bot-web` to GHCR, copies
+`infra/baby-bot/docker-compose.yml` to `/opt/baby-bot`, writes `.env`
+(`BABY_BOT_ENV` + `REGISTRY`/`IMAGE_TAG`), then `docker compose pull && up -d`.
+The backend container runs `prisma migrate deploy` + the idempotent seed on boot.
+
+Verify on the server:
+
+```bash
+cd /opt/baby-bot && docker compose ps          # all healthy
+curl -kI https://<domain>:8443/mini-app/        # 200, valid LE cert
+docker compose logs backend | tail              # "baby-bot backend listening on :3100"
+```
+
+## Onboarding a new product
+
+1. Add `infra/<product>/docker-compose.yml` (+ `.env.example`).
+2. Add the product's Dockerfile(s).
+3. Add a `<PRODUCT>_ENV` GitHub secret with the prod `.env`.
+4. Add a caller workflow `.github/workflows/deploy-<product>.yml` modelled on
+   `deploy-baby-bot.yml`: trigger on `<product>-v*`, pass `images`, `infra_dir`,
+   `deploy_path`, and the SSH + `<PRODUCT>_ENV` secrets to
+   `./.github/workflows/deploy.yml`.
+
+Everything else (build, GHCR push, SSH deploy) is shared.
+
+## TLS fallback (no port 80)
+
+Let's Encrypt validates HTTP-01 on :80 and TLS-ALPN-01 on :443 — both
+CA-fixed. Since the app runs on :8443, TLS-ALPN is unreachable, so **:80 must be
+open**. If :80 is unavailable, switch Caddy to **DNS-01** (add the relevant DNS
+provider module + API token) — see the Caddy automatic-HTTPS docs.

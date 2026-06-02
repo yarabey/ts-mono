@@ -1,0 +1,27 @@
+# Keep the Docker build context lean. The builder runs `pnpm install` itself,
+# so host node_modules/build outputs must not be shipped into the context.
+node_modules
+**/node_modules
+dist
+tmp
+.nx
+.git
+.github
+.vscode
+.idea
+
+# Never ship secrets into an image build.
+.env
+.env.*
+!.env.example
+
+# Test/coverage/editor noise.
+coverage
+lint-results
+*.log
+**/*.spec.ts
+**/*.test.ts
+e2e
+
+# Local infra runtime state (compose writes .env onto the server, not here).
+infra/**/.env

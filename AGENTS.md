@@ -123,3 +123,19 @@ Only the following are approved. Adding anything else requires an approved ADR:
 - Never duplicate server state into Zustand.
 - Never edit inside OpenSpec-managed AGENTS.md markers.
 - Never use `$queryRawUnsafe` / `$executeRawUnsafe` without justification.
+
+## Deployment
+
+Products ship via **tag-driven CI/CD** to a single self-hosted server. Pushing a
+`<product>-v*` tag (e.g. `baby-bot-v1.2.3`) builds Docker images, pushes them to
+**GHCR**, and redeploys a `docker compose` stack over SSH. The pipeline is
+reusable: `.github/workflows/deploy.yml` (`workflow_call`) is product-agnostic;
+each product adds a caller workflow + an `infra/<product>/` dir + Dockerfiles +
+a `<PRODUCT>_ENV` secret.
+
+- **Edge:** Caddy terminates TLS on **:8443** (Let's Encrypt; :80 open for ACME),
+  serves the mini-app under `/mini-app`, and proxies `/api` + `/webhook` to the
+  backend. URL shape: `https://<host>:8443/api/...` and `.../mini-app/`.
+- **Secrets** live as GitHub Actions secrets; CI writes the server `.env`.
+- See [`infra/README.md`](infra/README.md) for server bootstrap, the deploy
+  ritual, and onboarding a new product. Decisions: [ADR 0008](docs/adr/0008-deployment-tag-driven-cicd.md).

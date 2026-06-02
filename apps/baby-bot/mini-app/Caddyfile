@@ -1,0 +1,38 @@
+# baby-bot edge config.
+#
+# - App is served over HTTPS on :8443 (Let's Encrypt via HTTP-01 on :80 for a
+#   public {$DOMAIN}; an automatic internal cert when DOMAIN=localhost for local
+#   verification).
+# - Backend (Fastify) listens on :3100 inside the compose network as `backend`.
+# - URL shape: https://{$DOMAIN}:8443/api/*, /webhook  -> backend
+#              https://{$DOMAIN}:8443/mini-app/*       -> SPA static files
+
+{
+	# ACME HTTP-01 is fixed to port 80 by the CA; the app is served on 8443.
+	http_port 80
+	https_port 8443
+}
+
+https://{$DOMAIN}:8443 {
+	encode gzip
+
+	# REST API + Alice webhook -> backend (paths preserved; backend self-prefixes).
+	handle /api/* {
+		reverse_proxy backend:3100
+	}
+	handle /webhook* {
+		reverse_proxy backend:3100
+	}
+
+	# SPA under /mini-app. handle_path strips the prefix, so /mini-app/assets/x
+	# (built with base=/mini-app/) maps to /assets/x under /srv. SPA fallback to
+	# index.html for client-side routing.
+	handle_path /mini-app/* {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Convenience: bare root redirects into the app.
+	redir / /mini-app/ 308
+}

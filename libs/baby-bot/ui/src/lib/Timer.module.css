@@ -1,0 +1,21 @@
+.timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--bb-surface, #fff);
+  border: 1px solid var(--bb-border, #e6e6ec);
+}
+
+.label {
+  font-size: 13px;
+  color: var(--bb-muted, #98989f);
+}
+
+.elapsed {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

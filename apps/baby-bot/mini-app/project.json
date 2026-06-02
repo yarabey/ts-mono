@@ -1,0 +1,41 @@
+{
+  "name": "baby-bot-mini-app",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/baby-bot/mini-app/src",
+  "projectType": "application",
+  "tags": ["scope:baby-bot", "type:app"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "serve": {
+      "executor": "@nx/vite:dev-server",
+      "options": {
+        "buildTarget": "baby-bot-mini-app:build"
+      }
+    },
+    "build": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{workspaceRoot}/dist/apps/baby-bot/mini-app"],
+      "options": {
+        "outputPath": "dist/apps/baby-bot/mini-app",
+        "configFile": "apps/baby-bot/mini-app/vite.config.ts"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/apps/baby-bot/mini-app"],
+      "options": {
+        "passWithNoTests": true,
+        "configFile": "apps/baby-bot/mini-app/vitest.config.ts"
+      }
+    },
+    "preview": {
+      "executor": "@nx/vite:preview-server",
+      "options": {
+        "buildTarget": "baby-bot-mini-app:build"
+      }
+    }
+  }
+}

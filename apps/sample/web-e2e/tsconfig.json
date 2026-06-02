@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2021",
+    "types": ["node"],
+    "allowJs": true
+  },
+  "include": ["src/**/*.ts", "playwright.config.ts"]
+}

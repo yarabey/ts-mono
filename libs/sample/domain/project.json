@@ -1,0 +1,21 @@
+{
+  "name": "sample-domain",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/sample/domain/src",
+  "projectType": "library",
+  "tags": ["scope:sample", "type:util"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "passWithNoTests": true,
+        "configFile": "libs/sample/domain/vitest.config.ts"
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "name": "sample-backend",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/sample/backend/src",
+  "projectType": "application",
+  "tags": ["scope:sample", "type:app"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/dist/apps/sample/backend"],
+      "options": {
+        "outputPath": "dist/apps/sample/backend",
+        "main": "apps/sample/backend/src/main.ts",
+        "tsConfig": "apps/sample/backend/tsconfig.app.json",
+        "platform": "node",
+        "bundle": true,
+        "format": ["cjs"],
+        "skipTypeCheck": true,
+        "external": [
+          "@nestjs/microservices",
+          "@nestjs/websockets",
+          "cache-manager",
+          "class-transformer",
+          "class-validator",
+          "kafkajs",
+          "nats",
+          "mqtt",
+          "ioredis",
+          "amqp-connection-manager",
+          "amqplib",
+          "grpc",
+          "@grpc/grpc-js",
+          "@grpc/proto-loader",
+          "fastify-swagger"
+        ]
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx watch apps/sample/backend/src/main.ts",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/sample/backend"],
+      "options": {
+        "jestConfig": "apps/sample/backend/jest.config.js"
+      }
+    },
+    "prisma-migrate": {
+      "command": "npx prisma migrate deploy --schema=apps/sample/backend/prisma/schema.prisma",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "prisma-seed": {
+      "command": "npx tsx apps/sample/backend/prisma/seed.ts",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "prisma-generate": {
+      "command": "npx prisma generate --schema=apps/sample/backend/prisma/schema.prisma",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

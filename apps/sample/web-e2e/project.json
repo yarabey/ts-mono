@@ -1,0 +1,19 @@
+{
+  "name": "sample-web-e2e",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/sample/web-e2e/src",
+  "projectType": "application",
+  "tags": ["scope:sample", "type:app"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "e2e": {
+      "executor": "@nx/playwright:playwright",
+      "options": {
+        "playwrightConfig": "apps/sample/web-e2e/playwright.config.ts"
+      }
+    }
+  }
+}

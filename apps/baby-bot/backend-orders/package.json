@@ -1,0 +1,6 @@
+{
+  "name": "@acme/baby-bot-backend-orders",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs"
+}

@@ -1,0 +1,41 @@
+{
+  "name": "sample-web",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/sample/web/src",
+  "projectType": "application",
+  "tags": ["scope:sample", "type:app"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "serve": {
+      "executor": "@nx/vite:dev-server",
+      "options": {
+        "buildTarget": "sample-web:build"
+      }
+    },
+    "build": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{workspaceRoot}/dist/apps/sample/web"],
+      "options": {
+        "outputPath": "dist/apps/sample/web",
+        "configFile": "apps/sample/web/vite.config.ts"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/apps/sample/web"],
+      "options": {
+        "passWithNoTests": true,
+        "configFile": "apps/sample/web/vitest.config.ts"
+      }
+    },
+    "preview": {
+      "executor": "@nx/vite:preview-server",
+      "options": {
+        "buildTarget": "sample-web:build"
+      }
+    }
+  }
+}

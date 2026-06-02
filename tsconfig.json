@@ -2,5 +2,54 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./apps/baby-bot/backend-orders"
+    },
+    {
+      "path": "./libs/baby-bot/feature-main"
+    },
+    {
+      "path": "./apps/baby-bot/backend-bot"
+    },
+    {
+      "path": "./libs/baby-bot/data-access"
+    },
+    {
+      "path": "./libs/sample/data-access"
+    },
+    {
+      "path": "./apps/baby-bot/mini-app"
+    },
+    {
+      "path": "./libs/baby-bot/domain"
+    },
+    {
+      "path": "./apps/sample/backend"
+    },
+    {
+      "path": "./apps/sample/web-e2e"
+    },
+    {
+      "path": "./libs/sample/domain"
+    },
+    {
+      "path": "./apps/baby-bot/web"
+    },
+    {
+      "path": "./libs/shared/types"
+    },
+    {
+      "path": "./libs/baby-bot/ui"
+    },
+    {
+      "path": "./libs/shared/util"
+    },
+    {
+      "path": "./apps/sample/web"
+    },
+    {
+      "path": "./libs/shared/ui"
+    }
+  ]
 }

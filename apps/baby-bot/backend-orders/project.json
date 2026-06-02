@@ -1,0 +1,13 @@
+{
+  "name": "baby-bot-backend-orders",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/baby-bot/backend-orders/src",
+  "projectType": "application",
+  "tags": ["scope:baby-bot", "type:app"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    }
+  }
+}

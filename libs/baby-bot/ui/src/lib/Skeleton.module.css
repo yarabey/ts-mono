@@ -1,0 +1,25 @@
+.skeleton {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e8e8ee 25%, #f2f2f6 37%, #e8e8ee 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--bb-surface, #fff);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

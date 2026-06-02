@@ -1,0 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'apps/**/*'
+  - 'libs/*'
+  - 'libs/**/*'
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@swc/core': true
+  esbuild: true
+  msw: true
+  nx: true
+  prisma: true
+  unrs-resolver: true

@@ -1,0 +1,38 @@
+services:
+  sample-postgres:
+    image: postgres:17-alpine
+    container_name: sample-postgres
+    environment:
+      POSTGRES_USER: sample
+      POSTGRES_PASSWORD: sample
+      POSTGRES_DB: sample
+    ports:
+      - '5432:5432'
+    volumes:
+      - sample-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sample']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  baby-bot-postgres:
+    image: postgres:17-alpine
+    container_name: baby-bot-postgres
+    environment:
+      POSTGRES_USER: baby_bot
+      POSTGRES_PASSWORD: baby_bot
+      POSTGRES_DB: baby_bot
+    ports:
+      - '5433:5432'
+    volumes:
+      - baby-bot-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U baby_bot']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sample-pgdata:
+  baby-bot-pgdata:

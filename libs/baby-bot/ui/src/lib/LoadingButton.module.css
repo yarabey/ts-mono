@@ -1,0 +1,33 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.primary {
+  background: var(--bb-accent, #4f8cff);
+  color: #fff;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--bb-accent, #4f8cff);
+}
+
+.danger {
+  background: var(--bb-danger, #ff5a5a);
+  color: #fff;
+}

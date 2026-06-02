@@ -2,8 +2,18 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default"],
-    "sharedGlobals": []
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.spec.tsx",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/**/*.test.tsx",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.ts",
+      "!{projectRoot}/vitest.config.ts",
+      "!{projectRoot}/playwright.config.ts"
+    ],
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json"]
   },
   "plugins": [
     {
@@ -20,5 +30,20 @@
         }
       }
     }
-  ]
+  ],
+  "targetDefaults": {
+    "test": {
+      "inputs": ["default", "^production", "{workspaceRoot}/jest.config.ts", "{workspaceRoot}/vitest.config.ts"]
+    },
+    "lint": {
+      "inputs": ["default", "{workspaceRoot}/eslint.config.mjs"]
+    },
+    "build": {
+      "inputs": ["production", "^production"]
+    },
+    "e2e": {
+      "inputs": ["default", "^production"]
+    }
+  },
+  "analytics": false
 }

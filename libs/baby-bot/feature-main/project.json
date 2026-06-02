@@ -1,0 +1,21 @@
+{
+  "name": "baby-bot-feature-main",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/baby-bot/feature-main/src",
+  "projectType": "library",
+  "tags": ["scope:baby-bot", "type:feature"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{workspaceRoot}/lint-results/{projectRoot}"]
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "passWithNoTests": true,
+        "configFile": "libs/baby-bot/feature-main/vitest.config.ts"
+      }
+    }
+  }
+}

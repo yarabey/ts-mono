@@ -16,6 +16,18 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@org/source"]
+    "customConditions": ["@acme/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@acme/shared-types": ["libs/shared/types/src/index.ts"],
+      "@acme/shared-ui": ["libs/shared/ui/src/index.ts"],
+      "@acme/shared-util": ["libs/shared/util/src/index.ts"],
+      "@acme/sample-domain": ["libs/sample/domain/src/index.ts"],
+      "@acme/sample-data-access": ["libs/sample/data-access/src/index.ts"],
+      "@acme/baby-bot-domain": ["libs/baby-bot/domain/src/index.ts"],
+      "@acme/baby-bot-data-access": ["libs/baby-bot/data-access/src/index.ts"],
+      "@acme/baby-bot-feature-main": ["libs/baby-bot/feature-main/src/index.ts"],
+      "@acme/baby-bot-ui": ["libs/baby-bot/ui/src/index.ts"]
+    }
   }
 }

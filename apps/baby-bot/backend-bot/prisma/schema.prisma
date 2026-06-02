@@ -1,0 +1,448 @@
+generator client {
+  output          = "../src/generated/client"
+  provider        = "prisma-client-js"
+  previewFeatures = ["typedSql"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (upgraded from the original SQLite TEXT CHECK constraints)
+// ---------------------------------------------------------------------------
+
+enum EventType {
+  feeding
+  sleep
+  diaper
+  growth
+  health
+  milestone
+  note
+  pumping
+  bath
+  walk
+  weight
+  mood
+}
+
+enum Source {
+  miniapp
+  telegram
+  alice
+  telegram_voice
+  ai_parsed
+  test
+  csv_import
+  realm_import
+}
+
+enum RawEntryStatus {
+  pending
+  processing
+  processed
+  error
+  needs_review
+}
+
+enum FeedingType {
+  breast
+  bottle
+  solid
+  mixed
+  water
+}
+
+enum BreastSide {
+  left
+  right
+  both
+}
+
+enum SleepType {
+  night
+  nap
+}
+
+enum SleepQuality {
+  good
+  normal
+  bad
+}
+
+enum DiaperType {
+  wet
+  dirty
+  mixed
+}
+
+enum HealthType {
+  temperature
+  vaccination
+  doctor
+  medication
+  illness
+}
+
+enum MilestoneCategory {
+  motor
+  speech
+  social
+  cognitive
+}
+
+enum Gender {
+  male
+  female
+}
+
+enum UserRole {
+  parent
+  admin
+}
+
+enum EventRawEntryRole {
+  created
+  updated
+}
+
+// ---------------------------------------------------------------------------
+// Core records
+// ---------------------------------------------------------------------------
+
+model Child {
+  id         Int      @id @default(autoincrement())
+  name       String
+  birthDate  DateTime @map("birth_date")
+  gender     Gender?
+  avatarUrl  String?  @map("avatar_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  events Event[]
+  timers Timer[]
+
+  @@map("children")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  telegramId BigInt   @unique @map("telegram_id")
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  username   String?
+  role       UserRole @default(parent)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  settings UserSetting[]
+
+  @@map("users")
+}
+
+model Event {
+  id         Int       @id @default(autoincrement())
+  childId    Int       @map("child_id")
+  eventType  EventType @map("event_type")
+  occurredAt DateTime  @map("occurred_at")
+  source     Source
+  author     String?
+  note       String?
+  rawEntryId Int?      @map("raw_entry_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  child    Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  rawEntry RawEntry?       @relation("EventOriginRawEntry", fields: [rawEntryId], references: [id], onDelete: SetNull)
+
+  feeding   EventFeeding?
+  sleep     EventSleep?
+  diaper    EventDiaper?
+  growth    EventGrowth?
+  weight    EventWeight?
+  walk      EventWalk?
+  health    EventHealth?
+  milestone EventMilestone?
+  pumping   EventPumping?
+  bath      EventBath?
+
+  photos        Photo[]
+  rawEntryLinks EventRawEntry[]
+  csvImports    CsvImport[]
+  realmImports  RealmImport[]
+
+  @@index([childId, occurredAt])
+  @@index([eventType])
+  @@index([childId, eventType, occurredAt])
+  @@index([rawEntryId])
+  @@map("events")
+}
+
+// ---------------------------------------------------------------------------
+// Typed detail tables (1:1 with Event, cascade delete)
+// ---------------------------------------------------------------------------
+
+model EventFeeding {
+  id              Int          @id @default(autoincrement())
+  eventId         Int          @unique @map("event_id")
+  feedingType     FeedingType  @map("feeding_type")
+  breastSide      BreastSide?  @map("breast_side")
+  durationMin     Int?         @map("duration_min")
+  leftDurationMin Int?         @map("left_duration_min")
+  rightDurationMin Int?        @map("right_duration_min")
+  amountMl        Float?       @map("amount_ml")
+  foodName        String?      @map("food_name")
+  startedAt       DateTime?    @map("started_at")
+  endedAt         DateTime?    @map("ended_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+  @@map("event_feedings")
+}
+
+model EventSleep {
+  id          Int           @id @default(autoincrement())
+  eventId     Int           @unique @map("event_id")
+  sleepType   SleepType?    @map("sleep_type")
+  startedAt   DateTime      @map("started_at")
+  endedAt     DateTime?     @map("ended_at")
+  durationMin Int?          @map("duration_min")
+  quality     SleepQuality?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+  @@map("event_sleep")
+}
+
+model EventDiaper {
+  id         Int        @id @default(autoincrement())
+  eventId    Int        @unique @map("event_id")
+  diaperType DiaperType @map("diaper_type")
+  color      String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_diapers")
+}
+
+model EventGrowth {
+  id                  Int    @id @default(autoincrement())
+  eventId             Int    @unique @map("event_id")
+  heightCm            Float? @map("height_cm")
+  headCircumferenceCm Float? @map("head_circumference_cm")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_growth")
+}
+
+model EventWeight {
+  id       Int   @id @default(autoincrement())
+  eventId  Int   @unique @map("event_id")
+  weightKg Float @map("weight_kg")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_weight")
+}
+
+model EventWalk {
+  id          Int       @id @default(autoincrement())
+  eventId     Int       @unique @map("event_id")
+  durationMin Int?      @map("duration_min")
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_walks")
+}
+
+model EventHealth {
+  id          Int        @id @default(autoincrement())
+  eventId     Int        @unique @map("event_id")
+  healthType  HealthType @map("health_type")
+  value       Float?
+  doctorName  String?    @map("doctor_name")
+  vaccineName String?    @map("vaccine_name")
+  medication  String?
+  description String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_health")
+}
+
+model EventMilestone {
+  id          Int               @id @default(autoincrement())
+  eventId     Int               @unique @map("event_id")
+  category    MilestoneCategory
+  title       String
+  description String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_milestones")
+}
+
+model EventPumping {
+  id          Int         @id @default(autoincrement())
+  eventId     Int         @unique @map("event_id")
+  breastSide  BreastSide? @map("breast_side")
+  amountMl    Float?      @map("amount_ml")
+  durationMin Int?        @map("duration_min")
+  startedAt   DateTime?   @map("started_at")
+  endedAt     DateTime?   @map("ended_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+  @@map("event_pumping")
+}
+
+model EventBath {
+  id          Int       @id @default(autoincrement())
+  eventId     Int       @unique @map("event_id")
+  durationMin Int?      @map("duration_min")
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("event_baths")
+}
+
+// ---------------------------------------------------------------------------
+// Raw entry processing (AI parse queue)
+// ---------------------------------------------------------------------------
+
+model RawEntry {
+  id           Int            @id @default(autoincrement())
+  source       Source
+  author       String?
+  text         String
+  filePath     String?        @map("file_path")
+  recordedAt   DateTime       @map("recorded_at")
+  status       RawEntryStatus @default(pending)
+  parsedEvents Int?           @map("parsed_events")
+  errorMessage String?        @map("error_message")
+  emoji        String?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  processedAt  DateTime?      @map("processed_at")
+
+  originatedEvents Event[]         @relation("EventOriginRawEntry")
+  eventLinks       EventRawEntry[]
+
+  @@index([status])
+  @@map("raw_entries")
+}
+
+model EventRawEntry {
+  eventId    Int               @map("event_id")
+  rawEntryId Int               @map("raw_entry_id")
+  role       EventRawEntryRole @default(created)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rawEntry RawEntry @relation(fields: [rawEntryId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, rawEntryId])
+  @@index([rawEntryId])
+  @@index([eventId])
+  @@map("event_raw_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Photos
+// ---------------------------------------------------------------------------
+
+model Photo {
+  id             Int      @id @default(autoincrement())
+  eventId        Int?     @map("event_id")
+  telegramFileId String?  @map("telegram_file_id")
+  localPath      String?  @map("local_path")
+  caption        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@map("photos")
+}
+
+// ---------------------------------------------------------------------------
+// Import tracking
+// ---------------------------------------------------------------------------
+
+model CsvImport {
+  uniqueKey String   @id @map("unique_key")
+  eventId   Int?     @map("event_id")
+  fileName  String   @map("file_name")
+  rowHash   String   @map("row_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@map("csv_imports")
+}
+
+model CsvImportState {
+  fileName    String   @id @map("file_name")
+  lastMtimeMs BigInt   @map("last_mtime_ms")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("csv_import_state")
+}
+
+model RealmImport {
+  realmId   String   @id @map("realm_id")
+  eventId   Int?     @map("event_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@map("realm_imports")
+}
+
+// ---------------------------------------------------------------------------
+// User configuration & authorization
+// ---------------------------------------------------------------------------
+
+model UserSetting {
+  userId    Int      @map("user_id")
+  key       String
+  value     String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+  @@map("user_settings")
+}
+
+model AuthorizedChat {
+  chatId    BigInt   @id @map("chat_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("authorized_chats")
+}
+
+// ---------------------------------------------------------------------------
+// Running timers
+// ---------------------------------------------------------------------------
+
+model Timer {
+  id        String   @id
+  eventType String   @map("event_type")
+  details   String?
+  startedAt DateTime @map("started_at")
+  childId   Int      @default(1) @map("child_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("timers")
+}

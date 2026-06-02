@@ -6,8 +6,10 @@ packages:
 allowBuilds:
   '@nestjs/core': true
   '@prisma/client': true
-  '@prisma/engines': set this to true or false
+  '@prisma/engines': true
+  '@swc/core': true
   esbuild: true
   msw: true
+  nx: true
   prisma: true
   unrs-resolver: true

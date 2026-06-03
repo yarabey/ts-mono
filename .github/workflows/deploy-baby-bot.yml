@@ -1,0 +1,45 @@
+name: Deploy baby-bot
+
+# Ships baby-bot on a version tag, e.g.:
+#   git tag baby-bot-v1.0.0 && git push origin baby-bot-v1.0.0
+# Builds the backend + edge images, pushes them to GHCR, and redeploys the
+# compose stack on the server via the reusable deploy workflow.
+
+on:
+  push:
+    tags:
+      - 'baby-bot-v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
+    steps:
+      - id: tag
+        # baby-bot-v1.2.3 -> 1.2.3
+        run: echo "image_tag=${GITHUB_REF_NAME#baby-bot-v}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: resolve
+    uses: ./.github/workflows/deploy.yml
+    with:
+      product: baby-bot
+      image_tag: ${{ needs.resolve.outputs.image_tag }}
+      infra_dir: infra/baby-bot
+      deploy_path: /opt/baby-bot
+      images: >-
+        [
+          {"name":"baby-bot-backend","dockerfile":"apps/baby-bot/backend-bot/Dockerfile","build_args":""},
+          {"name":"baby-bot-web","dockerfile":"apps/baby-bot/mini-app/Dockerfile","build_args":"VITE_BASE_PATH=/mini-app/"}
+        ]
+    secrets:
+      SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+      SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+      SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+      APP_ENV: ${{ secrets.BABY_BOT_ENV }}

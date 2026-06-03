@@ -49,10 +49,12 @@ export class AppConfigService {
     return this.str('ZAI_API_KEY');
   }
   get zaiBaseUrl(): string {
-    return this.str('ZAI_BASE_URL', 'https://api.z.ai/v1');
+    // OpenAI-compatible base; `/chat/completions` is appended by the caller.
+    // GLM Coding Plan (international) endpoint — see infra/baby-bot/.env.example.
+    return this.str('ZAI_BASE_URL', 'https://api.z.ai/api/coding/paas/v4');
   }
   get zaiModel(): string {
-    return this.str('ZAI_MODEL', 'glm-4.5');
+    return this.str('ZAI_MODEL', 'glm-4.6');
   }
 
   // Filesystem

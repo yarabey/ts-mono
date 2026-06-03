@@ -54,8 +54,19 @@ body {
   max-width: 640px;
   margin: 0 auto;
   min-height: 100vh;
+  /* Dynamic viewport height avoids the mobile browser/Telegram chrome eating
+     the bottom of the layout (falls back to 100vh where unsupported). */
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* When opened inside Telegram, offset the content below Telegram's own
+     header (close button / title). `--tg-content-safe-area-inset-top` is set by
+     telegram-web-app.js; `--tg-safe-area-inset-top` and `env()` cover the device
+     notch. All resolve to 0 in a plain browser, so this is a no-op there. */
+  padding-top: calc(
+    var(--tg-safe-area-inset-top, env(safe-area-inset-top, 0px)) +
+      var(--tg-content-safe-area-inset-top, 0px)
+  );
 }
 
 @media (prefers-color-scheme: dark) {

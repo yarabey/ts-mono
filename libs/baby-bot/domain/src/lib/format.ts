@@ -106,11 +106,38 @@ export const eventIcon = (type: string): string => EVENT_ICONS[type] ?? '📌';
 
 type Detail = Record<string, unknown>;
 
+/** Event types that carry a start/end interval (and can be "ongoing"). */
+export const TIMED_EVENT_TYPES = ['feeding', 'sleep', 'walk', 'bath', 'pumping'];
+
+/**
+ * Resolve an event's effective start/end timing for editing and display.
+ *
+ * Imported (realm/CSV) or AI-parsed events may record only a `duration_min`
+ * without an explicit `started_at`/`ended_at` — historically this made the
+ * editor show `Конец == Начало` and never mark the event as ongoing. We treat
+ * an event as still ongoing only when it has a start, no end, and no recorded
+ * duration; otherwise we derive a sensible `ended_at` from the duration so the
+ * end never collapses onto the start.
+ */
+export function resolveEventTiming(event: Event): {
+  started_at: string;
+  ended_at: string;
+  is_open: boolean;
+} {
+  const d = (event.details ?? {}) as Detail;
+  const timed = TIMED_EVENT_TYPES.includes(event.event_type);
+  const dur = typeof d.duration_min === 'number' ? d.duration_min : null;
+  const started = (d.started_at as string) ?? event.occurred_at;
+  const isOpen = timed && !!d.started_at && !d.ended_at && dur == null;
+  const ended =
+    (d.ended_at as string) ??
+    (dur != null ? new Date(new Date(started).getTime() + dur * 60000).toISOString() : started);
+  return { started_at: started, ended_at: ended, is_open: isOpen };
+}
+
 export function isOpenEvent(event: Event): boolean {
-  const d = event.details as Detail | null;
-  if (!d) return false;
-  if (!['feeding', 'sleep', 'walk', 'bath', 'pumping'].includes(event.event_type)) return false;
-  return !!d.started_at && !d.ended_at;
+  if (!event.details || !TIMED_EVENT_TYPES.includes(event.event_type)) return false;
+  return resolveEventTiming(event).is_open;
 }
 
 function durationMin(d: Detail): number | null {

@@ -26,6 +26,7 @@ import {
   MILESTONE_CATEGORY_LABELS,
   MOOD_PRESETS,
   nowLocalInput,
+  resolveEventTiming,
   SLEEP_QUALITY_LABELS,
   SLEEP_TYPE_LABELS,
   toLocalDateTimeInput,
@@ -139,11 +140,8 @@ export function AddEvent() {
     const e = existing.data;
     if (!e) return;
     const d = (e.details ?? {}) as Record<string, unknown>;
-    const isOpen = !!(
-      d.started_at &&
-      !d.ended_at &&
-      ['feeding', 'sleep', 'walk', 'bath', 'pumping'].includes(e.event_type)
-    );
+    const timing = resolveEventTiming(e);
+    const isOpen = timing.is_open;
     const str = (v: unknown) => (v != null ? String(v) : '');
     setForm({
       occurred_at: toLocalDateTimeInput(e.occurred_at),
@@ -155,8 +153,8 @@ export function AddEvent() {
       amount_ml: str(d.amount_ml),
       food_name: str(d.food_name),
       sleep_type: str(d.sleep_type) || 'nap',
-      started_at: toLocalDateTimeInput((d.started_at as string) ?? e.occurred_at),
-      ended_at: isOpen ? nowLocalInput() : toLocalDateTimeInput((d.ended_at as string) ?? e.occurred_at),
+      started_at: toLocalDateTimeInput(timing.started_at),
+      ended_at: isOpen ? nowLocalInput() : toLocalDateTimeInput(timing.ended_at),
       quality: str(d.quality) || 'normal',
       diaper_type: str(d.diaper_type) || 'wet',
       color: str(d.color),

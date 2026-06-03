@@ -71,6 +71,8 @@ const dateToIso = (d?: Date | null): string | null => (d ? d.toISOString() : nul
 const durationMin = (a?: Date | null, b?: Date | null): number | null =>
   a && b ? Math.round((b.getTime() - a.getTime()) / 60000) : null;
 const secToMin = (s?: number | null): number | null => (s == null ? null : Math.round(s / 60));
+const addMin = (d?: Date | null, min?: number | null): Date | null =>
+  d && min != null ? new Date(d.getTime() + min * 60000) : null;
 
 function mapRealmEvent(item: RealmEvent): { eventType: string; details: Record<string, unknown> | null; note?: string } | null {
   switch (item.type) {
@@ -97,6 +99,8 @@ function mapRealmEvent(item: RealmEvent): { eventType: string; details: Record<s
         right = durationMin(item.rightStart, item.rightEnd) ?? secToMin(item.doubleRightTimerSeconds);
         dur = right;
       }
+      const start = item.leftStart ?? item.rightStart ?? item.date ?? null;
+      const end = item.leftEnd ?? item.rightEnd ?? addMin(start, dur);
       return {
         eventType: 'feeding',
         details: {
@@ -105,8 +109,8 @@ function mapRealmEvent(item: RealmEvent): { eventType: string; details: Record<s
           durationMin: dur,
           leftDurationMin: left,
           rightDurationMin: right,
-          startedAt: dateToIso(item.leftStart) ?? dateToIso(item.rightStart) ?? undefined,
-          endedAt: dateToIso(item.leftEnd) ?? dateToIso(item.rightEnd) ?? undefined,
+          startedAt: dateToIso(start) ?? undefined,
+          endedAt: dateToIso(end) ?? undefined,
         },
       };
     }
@@ -115,18 +119,40 @@ function mapRealmEvent(item: RealmEvent): { eventType: string; details: Record<s
       if (item.leftStart && item.rightStart) side = 'both';
       else if (item.leftStart) side = 'left';
       else if (item.rightStart) side = 'right';
-      return { eventType: 'pumping', details: { breastSide: side, amountMl: item.bottleAmount ?? item.amount ?? null } };
+      const start = item.leftStart ?? item.rightStart ?? item.date ?? null;
+      const dur =
+        durationMin(item.leftStart, item.leftEnd) ??
+        durationMin(item.rightStart, item.rightEnd) ??
+        secToMin(item.singleTimerSeconds);
+      const end = item.leftEnd ?? item.rightEnd ?? addMin(start, dur);
+      return {
+        eventType: 'pumping',
+        details: {
+          breastSide: side,
+          amountMl: item.bottleAmount ?? item.amount ?? null,
+          durationMin: dur,
+          startedAt: dateToIso(start) ?? undefined,
+          endedAt: dateToIso(end) ?? undefined,
+        },
+      };
     }
-    case 'sleep':
+    case 'sleep': {
+      // Realm sleeps record the moment in `date` with the length in
+      // `singleTimerSeconds` (the breast-timer fields are unused); derive the
+      // end from start + duration so it isn't collapsed onto the start.
+      const start = item.leftStart ?? item.date ?? null;
+      const dur = durationMin(item.leftStart, item.leftEnd) ?? secToMin(item.singleTimerSeconds);
+      const end = item.leftEnd ?? addMin(start, dur);
       return {
         eventType: 'sleep',
         details: {
           sleepType: item.isDaySleep ? 'nap' : 'night',
-          startedAt: dateToIso(item.leftStart) ?? undefined,
-          endedAt: dateToIso(item.leftEnd) ?? undefined,
-          durationMin: durationMin(item.leftStart, item.leftEnd) ?? secToMin(item.singleTimerSeconds),
+          startedAt: dateToIso(start) ?? undefined,
+          endedAt: dateToIso(end) ?? undefined,
+          durationMin: dur,
         },
       };
+    }
     case 'diaper': {
       const c = item.customComment?.toLowerCase() || '';
       const diaperType = c.includes('wet') || c.includes('мокр') ? 'wet' : c.includes('mixed') || c.includes('смешан') ? 'mixed' : 'dirty';
@@ -136,15 +162,19 @@ function mapRealmEvent(item: RealmEvent): { eventType: string; details: Record<s
       return { eventType: 'weight', details: { weightKg: item.weight ?? item.amount ?? 0 } };
     case 'height':
       return { eventType: 'growth', details: { heightCm: item.height ?? item.amount ?? 0 } };
-    case 'stroll':
+    case 'stroll': {
+      const start = item.leftStart ?? item.date ?? null;
+      const dur = durationMin(item.leftStart, item.leftEnd) ?? secToMin(item.singleTimerSeconds);
+      const end = item.leftEnd ?? addMin(start, dur);
       return {
         eventType: 'walk',
         details: {
-          durationMin: durationMin(item.leftStart, item.leftEnd) ?? secToMin(item.singleTimerSeconds),
-          startedAt: dateToIso(item.leftStart) ?? undefined,
-          endedAt: dateToIso(item.leftEnd) ?? undefined,
+          durationMin: dur,
+          startedAt: dateToIso(start) ?? undefined,
+          endedAt: dateToIso(end) ?? undefined,
         },
       };
+    }
     default:
       return null;
   }

@@ -126,7 +126,12 @@ export function Profile() {
   const onImportFile = (file: File | undefined) => {
     if (!file) return;
     importUpload.mutate(file, {
-      onSuccess: () => addToast('Импорт выполнен', 'success'),
+      onSuccess: (res) => {
+        const r = (res ?? {}) as { inserted?: number; updated?: number; errors?: string[] };
+        const errors = r.errors?.length ?? 0;
+        const summary = `Импорт: +${r.inserted ?? 0}, обновлено ${r.updated ?? 0}` + (errors ? `, ошибок ${errors}` : '');
+        addToast(summary, errors ? 'error' : 'success');
+      },
       onError: (e) => addToast(e instanceof Error ? e.message : 'Ошибка импорта', 'error'),
     });
   };

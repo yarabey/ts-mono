@@ -26,7 +26,7 @@ Approve these runtime dependencies for `baby-bot` only:
 | --- | --- | --- |
 | `node-telegram-bot-api` | Behaviour parity for the Telegram bot (polling, commands, voice download). Re-implementing the Bot API by hand is high-risk churn. | Used only in `telegram.service.ts`; bot init is config-gated (no token → bot disabled). Flagged for future review vs. `grammy`/native HTTP. |
 | `socks-proxy-agent` | The bot reaches Telegram through a SOCKS5 proxy in the deployment environment. | Used only when `TELEGRAM_SOCKS5_PROXY` is set. Ambient type shim; resolved at runtime/build. |
-| `realm` | One-shot historical import from legacy Realm mobile DB files. Heavy native module. | **Not** a runtime app dependency: marked `external` in `project.json`, dynamically imported via a non-literal specifier, and run only via the `realm-import` Nx target (`realm-import.script.ts`). Optional to install. |
+| `realm` | Historical import from legacy Realm mobile DB files. Heavy native module. | **Not** a bundled runtime app dependency: marked `external` in `project.json` and loaded via a non-literal dynamic `import()` (`realm-importer.ts`) so it is never statically bundled and is optional to install. The shared import loop is invoked from both the `realm-import` Nx target (batch) and the `/api/import/upload` endpoint (single file via `RealmImportService`); when the module isn't installed, both fail with a clear message instead of crashing. |
 
 NestJS-ecosystem additions (`@nestjs/jwt`, `@nestjs/config`, `@nestjs/schedule`,
 `@fastify/multipart`, plus `fastify` made an explicit dep for type resolution)
@@ -37,8 +37,9 @@ separate ADR.
 
 - `node-telegram-bot-api` and `socks-proxy-agent` ship in the served backend
   bundle but are inert without their env config.
-- `realm` is never bundled into the served backend; importing it requires
-  installing it explicitly and running the dedicated Nx target.
+- `realm` is never bundled into the served backend; importing it (via the Nx
+  target or the upload endpoint) requires the optional module to be installed,
+  otherwise the import fails with an actionable message.
 - CI (`GitHub Actions spending limit: $0`) runs lint/test/build only; all
   external integrations (Telegram/ZAI/Whisper/Realm) are mocked or gated in
   tests, never called live.

@@ -1,10 +1,8 @@
 import { BadRequestException, Controller, Logger, Post, Req } from '@nestjs/common';
 import '@fastify/multipart';
-import * as fs from 'fs';
-import * as path from 'path';
 import type { FastifyRequest } from 'fastify';
 import { CsvImportService } from './csv-import.service';
-import { AppConfigService } from '../config/app-config.service';
+import { RealmImportService } from './realm-import.service';
 
 @Controller('api/import')
 export class ImportController {
@@ -12,7 +10,7 @@ export class ImportController {
 
   constructor(
     private readonly csv: CsvImportService,
-    private readonly config: AppConfigService,
+    private readonly realm: RealmImportService,
   ) {}
 
   @Post('upload')
@@ -29,16 +27,13 @@ export class ImportController {
     }
 
     if (filename.toLowerCase().endsWith('.realm')) {
-      // Realm is a heavy native module isolated to a one-shot script (kept out
-      // of the served bundle). Persist the upload and point at the Nx target.
-      const dir = path.resolve(this.config.realmDir);
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, filename), buffer);
-      return {
-        type: 'realm',
-        message: 'Realm file stored. Run `pnpm nx run baby-bot-backend-bot:realm-import` to import it.',
-        stored: path.join(dir, filename),
-      };
+      try {
+        const result = await this.realm.importBuffer(buffer, filename);
+        return { type: 'realm', ...result };
+      } catch (err) {
+        // e.g. the optional native `realm` module isn't installed in this env.
+        throw new BadRequestException((err as Error).message);
+      }
     }
 
     throw new BadRequestException('Unsupported file type (expected .csv or .realm)');

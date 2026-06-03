@@ -102,18 +102,52 @@ export function toIso(dateTime: string): string {
   return dateTime.replace(' ', 'T');
 }
 
+/** End = start + duration, so a timed event's end never collapses onto its
+ * start when the source CSV omits the `Окончание` column. */
+function addMinIso(startIso: string | undefined, min: number | null): string | undefined {
+  if (!startIso || min == null) return undefined;
+  const t = new Date(startIso).getTime();
+  if (Number.isNaN(t)) return undefined;
+  return new Date(t + min * 60000).toISOString();
+}
+
+/** Duration derived from an explicit start/end pair (positive minutes only). */
+function diffMin(startIso: string | undefined, endIso: string | undefined): number | null {
+  if (!startIso || !endIso) return null;
+  const a = new Date(startIso).getTime();
+  const b = new Date(endIso).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  const m = Math.round((b - a) / 60000);
+  return m > 0 ? m : null;
+}
+
 /** Map a source CSV row to an event type + detail payload (snake_case). */
 export function mapDetails(row: CsvRow): MappedRow {
   const valNum = num(row.valueNum);
   switch (row.event) {
-    case 'Сцеживание':
-      return { eventType: 'pumping', details: { breast_side: SIDE_MAP[row.type] ?? null, amount_ml: valNum } };
+    case 'Сцеживание': {
+      const started = row.start ? toIso(row.start) : undefined;
+      const ended = row.end ? toIso(row.end) : undefined;
+      return {
+        eventType: 'pumping',
+        details: {
+          breast_side: SIDE_MAP[row.type] ?? null,
+          amount_ml: valNum,
+          started_at: started,
+          ended_at: ended,
+          duration_min: diffMin(started, ended),
+        },
+      };
+    }
     case 'Бутылочка':
       return { eventType: 'feeding', details: { feeding_type: 'bottle', amount_ml: valNum ?? 0, food_name: row.type || null } };
     case 'Кормление грудью': {
       const sides = row.type.split(';').map((s) => s.trim()).filter(Boolean);
       const breastSide = sides.length > 1 ? 'both' : SIDE_MAP[sides[0]] ?? null;
-      const durationMin = valNum != null ? Math.round(valNum / 60) : null;
+      const started = row.start ? toIso(row.start) : toIso(row.datetime);
+      const explicitDuration = valNum != null ? Math.round(valNum / 60) : null;
+      const ended = row.end ? toIso(row.end) : addMinIso(started, explicitDuration);
+      const durationMin = explicitDuration ?? diffMin(started, ended);
       let left: number | null = null;
       let right: number | null = null;
       if (sides.length > 1 && durationMin != null) {
@@ -128,21 +162,25 @@ export function mapDetails(row: CsvRow): MappedRow {
           duration_min: durationMin,
           left_duration_min: left,
           right_duration_min: right,
-          started_at: row.start ? toIso(row.start) : undefined,
-          ended_at: row.end ? toIso(row.end) : undefined,
+          started_at: started,
+          ended_at: ended,
         },
       };
     }
-    case 'Сон':
+    case 'Сон': {
+      const started = row.start ? toIso(row.start) : toIso(row.datetime);
+      const explicitDuration = valNum != null ? Math.round(valNum / 60) : null;
+      const ended = row.end ? toIso(row.end) : addMinIso(started, explicitDuration);
       return {
         eventType: 'sleep',
         details: {
           sleep_type: row.type === 'Ночной' ? 'night' : 'nap',
-          started_at: row.start ? toIso(row.start) : toIso(row.datetime),
-          ended_at: row.end ? toIso(row.end) : undefined,
-          duration_min: valNum != null ? Math.round(valNum / 60) : null,
+          started_at: started,
+          ended_at: ended,
+          duration_min: explicitDuration ?? diffMin(started, ended),
         },
       };
+    }
     case 'Подгузник': {
       const map: Record<string, string> = { Грязный: 'dirty', Мокрый: 'wet', Смешанный: 'mixed' };
       return { eventType: 'diaper', details: { diaper_type: map[row.type] || 'dirty' } };
@@ -151,15 +189,19 @@ export function mapDetails(row: CsvRow): MappedRow {
       return { eventType: 'weight', details: { weight_kg: num(row.value.replace(' кг', '')) ?? valNum ?? 0 } };
     case 'Рост':
       return { eventType: 'growth', details: { height_cm: num(row.value.replace(' см', '')) ?? valNum ?? 0 } };
-    case 'Прогулка':
+    case 'Прогулка': {
+      const started = row.start ? toIso(row.start) : toIso(row.datetime);
+      const explicitDuration = valNum != null ? Math.round(valNum / 60) : null;
+      const ended = row.end ? toIso(row.end) : addMinIso(started, explicitDuration);
       return {
         eventType: 'walk',
         details: {
-          duration_min: valNum != null ? Math.round(valNum / 60) : null,
-          started_at: row.start ? toIso(row.start) : undefined,
-          ended_at: row.end ? toIso(row.end) : undefined,
+          duration_min: explicitDuration ?? diffMin(started, ended),
+          started_at: started,
+          ended_at: ended,
         },
       };
+    }
     case 'Настроение':
       return { eventType: 'mood', details: null, note: row.type || row.value };
     default:

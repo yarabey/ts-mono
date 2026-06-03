@@ -55,6 +55,13 @@ FROM node:22-bookworm-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
+# node:bookworm-slim ships without the system OpenSSL runtime; the Prisma query
+# engine (libquery_engine-debian-openssl-3.0.x) needs libssl.so.3, and
+# ca-certificates is required for outbound TLS (Telegram/ZAI).
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Pinned production dependencies (incl. prisma CLI + tsx for migrate/seed).
 COPY --from=runtime-deps /runtime/node_modules ./node_modules
 COPY --from=runtime-deps /runtime/package.json ./package.json

@@ -157,26 +157,55 @@ export const UpdateChildPayloadSchema = z.object({
 });
 export type UpdateChildPayload = z.infer<typeof UpdateChildPayloadSchema>;
 
+/** The wire format sends explicit `null`s for empty optional detail columns
+ * (the backend keeps them so the shape is stable). The per-type detail schemas
+ * use `.optional()`, which rejects `null`, so strip nullish values before
+ * validating — otherwise the row fails its own schema. */
+function stripNullish(detail: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(detail).filter(([, v]) => v !== null && v !== undefined),
+  );
+}
+
 /** Fully-enriched event as returned to the mini-app (base + details + photo). */
-export const EventSchema = z.object({
-  id: z.number().int(),
-  child_id: z.number().int(),
-  event_type: EventTypeSchema,
-  occurred_at: IsoDateTime,
-  source: SourceSchema,
-  author: z.string().nullish(),
-  note: z.string().nullish(),
-  raw_entry_id: z.number().int().nullish(),
-  raw_entry_emoji: z.string().nullish(),
-  details: EventDetailsSchema.nullable(),
-  photo: z
-    .object({
-      id: z.number().int(),
-      url: z.string(),
-      caption: z.string().optional(),
-    })
-    .nullish(),
-});
+export const EventSchema = z
+  .object({
+    id: z.number().int(),
+    child_id: z.number().int(),
+    event_type: EventTypeSchema,
+    occurred_at: IsoDateTime,
+    source: SourceSchema,
+    author: z.string().nullish(),
+    note: z.string().nullish(),
+    raw_entry_id: z.number().int().nullish(),
+    raw_entry_emoji: z.string().nullish(),
+    // Kept loose here and validated per `event_type` in the transform below. A
+    // blind `z.union` of the detail schemas mis-matches: rows with `null`
+    // columns fail their own schema and fall through to an all-optional schema
+    // (growth/walk/bath) that matches anything and silently drops every field —
+    // which is why started_at/ended_at (and weight_kg) used to vanish.
+    details: z.record(z.string(), z.unknown()).nullish(),
+    photo: z
+      .object({
+        id: z.number().int(),
+        url: z.string(),
+        caption: z.string().optional(),
+      })
+      .nullish(),
+  })
+  .transform((e) => {
+    let details: EventDetails | null = null;
+    if (e.details) {
+      const cleaned = stripNullish(e.details);
+      const schema = DETAIL_SCHEMA_BY_TYPE[e.event_type as keyof typeof DETAIL_SCHEMA_BY_TYPE];
+      const parsed = schema?.safeParse(cleaned);
+      // Use the typed result when it validates; otherwise fall back to the
+      // cleaned object so we never lose fields (matches the old never-throw
+      // behaviour while keeping started_at/ended_at intact).
+      details = (parsed?.success ? parsed.data : cleaned) as EventDetails;
+    }
+    return { ...e, details };
+  });
 export type Event = z.infer<typeof EventSchema>;
 
 export const EventsResponseSchema = z.object({

@@ -21,6 +21,7 @@ import {
   type Event,
   type EventType,
   formatDate,
+  isOpenEvent,
   type RawEntry,
 } from '@acme/baby-bot-domain';
 import styles from './Journal.module.css';
@@ -235,7 +236,7 @@ export function Journal() {
                     <EventCard
                       event={item.data}
                       onClick={() => navigate(`/event/${item.data.id}`)}
-                      onClose={handleClose}
+                      onClose={isOpenEvent(item.data) ? handleClose : undefined}
                     />
                   </div>
                   {deleteConfirm === item.data.id ? (

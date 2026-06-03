@@ -22,9 +22,20 @@ export class AppConfigService {
     return Number(this.str('PORT', '3100'));
   }
 
+  get isProduction(): boolean {
+    return this.str('NODE_ENV') === 'production';
+  }
+
   // Auth
   get jwtSecret(): string {
-    return this.str('JWT_SECRET', 'dev-secret');
+    const secret = this.str('JWT_SECRET');
+    if (secret) return secret;
+    // Fail closed in production: never fall back to a publicly-known default
+    // secret (would allow anyone to forge JWTs). Only ergonomic in local dev.
+    if (this.isProduction) {
+      throw new Error('JWT_SECRET is not set');
+    }
+    return 'dev-secret';
   }
   get accessCode(): string {
     return this.str('ACCESS_CODE');

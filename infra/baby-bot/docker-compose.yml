@@ -32,6 +32,11 @@ services:
         condition: service_healthy
     volumes:
       - babybot-data:/app/data
+    # Lets the container reach host-local services (e.g. a SOCKS5 proxy for
+    # Telegram) via `host.docker.internal`. Set TELEGRAM_SOCKS5_PROXY to
+    # host.docker.internal:<port> and bind the proxy on the host gateway iface.
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
 
   web:
     image: ${REGISTRY}/baby-bot-web:${IMAGE_TAG}

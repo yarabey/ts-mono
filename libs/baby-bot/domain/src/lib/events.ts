@@ -143,6 +143,20 @@ export const ChildSchema = z.object({
 });
 export type Child = z.infer<typeof ChildSchema>;
 
+export const ChildrenResponseSchema = z.object({
+  children: z.array(ChildSchema),
+});
+export type ChildrenResponse = z.infer<typeof ChildrenResponseSchema>;
+
+/** Editable child fields (Dashboard inline edit + Profile). */
+export const UpdateChildPayloadSchema = z.object({
+  name: z.string().min(1).optional(),
+  birth_date: z.string().optional(),
+  gender: z.enum(['male', 'female']).optional(),
+  avatar_url: z.string().optional(),
+});
+export type UpdateChildPayload = z.infer<typeof UpdateChildPayloadSchema>;
+
 /** Fully-enriched event as returned to the mini-app (base + details + photo). */
 export const EventSchema = z.object({
   id: z.number().int(),

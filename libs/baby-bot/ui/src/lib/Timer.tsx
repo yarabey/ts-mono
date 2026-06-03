@@ -3,7 +3,8 @@ import { LoadingButton } from './LoadingButton.js';
 import styles from './Timer.module.css';
 
 export interface TimerProps {
-  label: string;
+  /** Optional caption above the clock; omit for a bare elapsed display. */
+  label?: string;
   startedAt: string;
   onStop?: () => void;
   stopping?: boolean;
@@ -29,7 +30,7 @@ export function Timer({ label, startedAt, onStop, stopping }: TimerProps) {
   return (
     <div className={styles.timer}>
       <div>
-        <div className={styles.label}>{label}</div>
+        {label && <div className={styles.label}>{label}</div>}
         <div className={styles.elapsed}>{formatElapsed(elapsed)}</div>
       </div>
       {onStop && (

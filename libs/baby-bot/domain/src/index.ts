@@ -4,3 +4,6 @@ export * from './lib/dto.js';
 export * from './lib/growth.js';
 export * from './lib/format.js';
 export * from './lib/who-percentiles.js';
+export * from './lib/colors.js';
+export * from './lib/health.js';
+export * from './lib/constants.js';

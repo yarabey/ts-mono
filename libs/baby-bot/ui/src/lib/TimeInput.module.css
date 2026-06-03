@@ -1,0 +1,10 @@
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--bb-border, #d0d0d8);
+  border-radius: 10px;
+  background: var(--bb-surface, #fff);
+  color: var(--bb-text, #1c1c1e);
+  font-size: 15px;
+  font-family: inherit;
+}

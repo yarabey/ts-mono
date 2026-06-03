@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { ReactNode } from 'react';
@@ -24,7 +25,11 @@ afterAll(() => server.close());
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 describe('Stats screen', () => {
@@ -32,6 +37,6 @@ describe('Stats screen', () => {
     render(<Stats />, { wrapper });
     expect(screen.getByText('Статистика')).toBeTruthy();
     await waitFor(() => expect(screen.getByText('21')).toBeTruthy());
-    expect(screen.getByText('Кормление')).toBeTruthy();
+    expect(screen.getByText('Кормления')).toBeTruthy();
   });
 });

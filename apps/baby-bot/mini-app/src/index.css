@@ -6,6 +6,36 @@
   --bb-muted: #98989f;
   --bb-text: #1c1c1e;
   --bb-bg: #f2f2f7;
+
+  /* Secondary surface (cards/pills on top of --bb-surface) */
+  --bb-surface-2: #f2f2f7;
+  --bb-success: #34c759;
+
+  /* Semantic alert tokens — SmartAlerts warning/critical banners */
+  --bb-warning-bg: #fff4e0;
+  --bb-warning-text: #b45309;
+  --bb-critical-bg: #ffe4e4;
+  --bb-critical-text: #c0271f;
+
+  /* Pattern timeline event colors (mirror domain PATTERN_EVENT_COLORS) */
+  --bb-pattern-sleep: #818cf8;
+  --bb-pattern-feeding: #fb923c;
+  --bb-pattern-diaper: #4ade80;
+  --bb-pattern-pumping: #facc15;
+  --bb-pattern-walk: #2dd4bf;
+  --bb-pattern-bath: #22d3ee;
+  --bb-pattern-mood: #f472b6;
+  --bb-pattern-weight: #f87171;
+  --bb-pattern-fallback: #9ca3af;
+
+  /* Growth-chart WHO percentile-band colors (P3/P15/P50/P85/P97) */
+  --bb-band-p3: #cbd5e1;
+  --bb-band-p15: #93c5fd;
+  --bb-band-p50: #2563eb;
+  --bb-band-p85: #93c5fd;
+  --bb-band-p97: #cbd5e1;
+  --bb-band-child: #ef4444;
+
   color-scheme: light dark;
 }
 
@@ -35,5 +65,12 @@ body {
     --bb-text: #f2f2f7;
     --bb-bg: #000;
     --bb-muted: #8e8e93;
+
+    --bb-surface-2: #2c2c2e;
+
+    --bb-warning-bg: #3a2c12;
+    --bb-warning-text: #fbbf24;
+    --bb-critical-bg: #3a1a1a;
+    --bb-critical-text: #fca5a5;
   }
 }

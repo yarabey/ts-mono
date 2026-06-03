@@ -1,9 +1,4 @@
-# mini-app Specification
-
-## Purpose
-Provide a React Telegram Mini App with Dashboard, Add Event, Journal, Stats, Pattern, Growth Chart, and Profile screens. Server data flows through TanStack Query hooks, ephemeral UI state through Zustand, and access is authenticated via Telegram `initData` or access code with JWTs.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Mini App screens
 The system SHALL provide a React Telegram Mini App with Dashboard, Add Event, Journal, Stats, Pattern, Growth Chart, and Profile screens that match the `baby-ai` reference app in interface and feature set. Screen composition lives in `@acme/baby-bot-feature-main`, reusable presentational components in `@acme/baby-bot-ui` (styled with CSS Modules), and the app shell, routing, and providers in `apps/baby-bot/mini-app`. Visual and behavioral parity is achieved using the approved stack (CSS Modules, TanStack Query) — the original Tailwind/SWR implementation is the reference, not the source to copy.
@@ -23,6 +18,8 @@ The system SHALL provide a React Telegram Mini App with Dashboard, Add Event, Jo
 #### Scenario: Pattern and Growth Chart render visualizations
 - **WHEN** the user opens Pattern or Growth Chart
 - **THEN** Pattern renders a 24-hour color-coded timeline and Growth Chart renders a WHO percentile-band chart, matching the `baby-ai` reference
+
+## ADDED Requirements
 
 ### Requirement: Dashboard parity
 The Dashboard SHALL match the `baby-ai` home screen: a header with the child's name and age and a settings (gear) button, inline editable weight/height cards, a live sleep status (elapsed timer when sleeping) with a color-coded wake-window monitor, smart overdue alerts, an active-events list with inline close actions, a quick-action button grid positioned below active events, and a "today" summary (feedings / sleep duration / diapers).
@@ -150,28 +147,3 @@ The Mini App SHALL provide the `baby-ai` mobile interaction layer: edge-swipe ba
 #### Scenario: Quick action sheets
 - **WHEN** the user triggers quick feeding or quick diaper from the Dashboard
 - **THEN** a dedicated bottom sheet with the relevant options is presented
-
-### Requirement: Server state via TanStack Query
-The Mini App SHALL manage all backend data through TanStack Query hooks in `@acme/baby-bot-data-access` under a single `QueryClientProvider` (default staleTime 30s, gcTime 5min), and SHALL NOT duplicate server data into client state. Responses MUST be validated against the shared Zod contracts at the fetch boundary.
-
-#### Scenario: Data fetched via query hooks
-- **WHEN** a screen needs events, stats, or timers
-- **THEN** it consumes a typed TanStack Query hook from the data-access lib rather than fetching directly
-
-#### Scenario: Mutation refreshes affected queries
-- **WHEN** the user creates or deletes an event
-- **THEN** the affected queries are invalidated/updated so the UI reflects the change
-
-### Requirement: Client state via Zustand
-The Mini App SHALL hold ephemeral UI/client state (open sheets, toasts, active-timer display, offline queue) in Zustand stores, never mirroring server data.
-
-#### Scenario: UI toggle uses Zustand
-- **WHEN** the user opens a bottom sheet or shows a toast
-- **THEN** that ephemeral state is managed by a Zustand store, not server state
-
-### Requirement: Authenticated API access
-The Mini App SHALL authenticate via Telegram `initData` (or access code) to obtain a JWT, attach it to API requests, and handle 401 responses by re-authenticating or logging out.
-
-#### Scenario: Auto re-auth on 401
-- **WHEN** an API request returns HTTP 401
-- **THEN** the app clears the stale token and triggers re-authentication

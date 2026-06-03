@@ -1,27 +1,32 @@
+import { eventIcon, eventLabel } from '@acme/baby-bot-domain';
+import { impactLight } from './haptics.js';
 import styles from './QuickButtons.module.css';
 
 export interface QuickButtonsProps {
-  onQuickFeeding: () => void;
-  onQuickDiaper: () => void;
-  onAddNote: () => void;
-  onStartTimer: () => void;
+  /** Ordered, already-filtered event types to render as quick buttons. */
+  types: string[];
+  /** Invoked with the chosen type (app navigates to the add screen). */
+  onSelect: (type: string) => void;
 }
 
-export function QuickButtons({ onQuickFeeding, onQuickDiaper, onAddNote, onStartTimer }: QuickButtonsProps) {
+/** Configurable 4-column quick-action grid (one button per event type). */
+export function QuickButtons({ types, onSelect }: QuickButtonsProps) {
   return (
     <div className={styles.grid}>
-      <button className={styles.btn} onClick={onQuickFeeding}>
-        <span className={styles.icon}>🍼</span>Кормление
-      </button>
-      <button className={styles.btn} onClick={onQuickDiaper}>
-        <span className={styles.icon}>🧷</span>Подгузник
-      </button>
-      <button className={styles.btn} onClick={onStartTimer}>
-        <span className={styles.icon}>⏱️</span>Таймер
-      </button>
-      <button className={styles.btn} onClick={onAddNote}>
-        <span className={styles.icon}>📝</span>Заметка
-      </button>
+      {types.map((type) => (
+        <button
+          key={type}
+          type="button"
+          className={styles.btn}
+          onClick={() => {
+            impactLight();
+            onSelect(type);
+          }}
+        >
+          <span className={styles.icon}>{eventIcon(type)}</span>
+          <span className={styles.caption}>{eventLabel(type)}</span>
+        </button>
+      ))}
     </div>
   );
 }

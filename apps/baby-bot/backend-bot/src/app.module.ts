@@ -9,6 +9,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { DiaryModule } from './diary/diary.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
+import { ChildrenModule } from './children/children.module';
+import { ExportModule } from './export/export.module';
 import { TimersModule } from './timers/timers.module';
 import { PhotosModule } from './photos/photos.module';
 import { SettingsModule } from './settings/settings.module';
@@ -32,6 +34,8 @@ import { DataImportModule } from './data-import/data-import.module';
     DiaryModule,
     AuthModule,
     EventsModule,
+    ChildrenModule,
+    ExportModule,
     TimersModule,
     PhotosModule,
     SettingsModule,

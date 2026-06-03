@@ -1,0 +1,263 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 88px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bb-border, #e6e6ec);
+}
+
+.back {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.childRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  font-size: 30px;
+}
+
+.childName {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.childAge {
+  font-size: 14px;
+  color: var(--bb-muted, #98989f);
+}
+
+.infoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bb-surface-2, #f2f2f7);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.infoLabel {
+  color: var(--bb-muted, #98989f);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--bb-border, #d0d0d8);
+  border-radius: 10px;
+  background: var(--bb-surface, #fff);
+  color: var(--bb-text, #1c1c1e);
+  font: inherit;
+  font-size: 15px;
+}
+
+.options {
+  display: flex;
+  gap: 8px;
+}
+
+.option {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--bb-surface-2, #f2f2f7);
+  color: var(--bb-text, #1c1c1e);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.optionActive {
+  background: var(--bb-accent, #4f8cff);
+  color: #fff;
+}
+
+.secondaryBtn {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bb-surface-2, #f2f2f7);
+  color: var(--bb-text, #1c1c1e);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bb-border, #e6e6ec);
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bb-muted, #98989f);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.visBtn {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.visShown {
+  background: color-mix(in srgb, var(--bb-accent, #4f8cff) 18%, transparent);
+  color: var(--bb-accent, #4f8cff);
+}
+
+.visHidden {
+  background: var(--bb-surface-2, #f2f2f7);
+  color: var(--bb-muted, #98989f);
+}
+
+.notifyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bb-surface-2, #f2f2f7);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.notifyStatus {
+  display: flex;
+  justify-content: space-between;
+}
+
+.statusOn {
+  color: #34c759;
+  font-weight: 600;
+}
+
+.statusOff {
+  color: var(--bb-muted, #98989f);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--bb-muted, #98989f);
+  margin: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bb-surface, #fff);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.thresholdBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bb-border, #e6e6ec);
+}
+
+.thresholdTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bb-muted, #98989f);
+}
+
+.thresholdRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.thresholdInput {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--bb-border, #d0d0d8);
+  border-radius: 6px;
+  background: var(--bb-surface, #fff);
+  color: var(--bb-text, #1c1c1e);
+  font: inherit;
+  text-align: right;
+  font-size: 14px;
+}
+
+.version {
+  text-align: center;
+  font-size: 12px;
+  color: var(--bb-muted, #98989f);
+  padding-top: 16px;
+  border-top: 1px solid var(--bb-border, #e6e6ec);
+}
+
+.loading {
+  text-align: center;
+  padding: 32px;
+  color: var(--bb-muted, #98989f);
+}

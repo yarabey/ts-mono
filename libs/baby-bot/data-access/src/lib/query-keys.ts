@@ -9,4 +9,8 @@ export const queryKeys = {
   timers: () => ['timers', 'active'] as const,
   rawEntries: (params?: Record<string, unknown>) => ['raw-entries', params ?? {}] as const,
   setting: (key: string) => ['setting', key] as const,
+  children: () => ['children'] as const,
 };
+
+/** Settings key under which quick-button visibility/order is persisted (JSON). */
+export const QUICK_BUTTONS_SETTING_KEY = 'quick_buttons';

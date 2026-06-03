@@ -79,11 +79,46 @@ export const api = {
     quickDiaper: (data: unknown) => request('/api/events/quick/diaper', { method: 'POST', body: JSON.stringify(data) }),
     active: () => request('/api/events/active'),
     close: (id: number) => request(`/api/events/${id}/close`, { method: 'POST' }),
+    clear: () => request('/api/events', { method: 'DELETE' }),
+  },
+  children: {
+    list: () => request('/api/children'),
+    update: (id: number, payload: unknown) =>
+      request(`/api/children/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   },
   stats: {
     get: (period: string, childId = 1) => request(`/api/stats${qs({ period, child_id: childId })}`),
     pattern: (date: string | undefined, childId = 1) => request(`/api/stats/pattern${qs({ date, child_id: childId })}`),
     growthChart: (childId = 1) => request(`/api/stats/growth-chart${qs({ child_id: childId })}`),
+  },
+  photos: {
+    upload: async (file: File): Promise<{ id: number; url: string }> => {
+      const form = new FormData();
+      form.append('file', file);
+      const token = getToken();
+      const res = await fetch('/api/photos/upload', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({ error: res.statusText }))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<{ id: number; url: string }>;
+    },
+    link: (eventId: number, photoId: number) =>
+      request(`/api/events/${eventId}/photo`, { method: 'POST', body: JSON.stringify({ photo_id: photoId }) }),
+  },
+  export: {
+    csv: async (params?: Record<string, string | number | undefined>): Promise<Blob> => {
+      const token = getToken();
+      const res = await fetch(`/api/export/csv${qs(params)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.blob();
+    },
   },
   timers: {
     start: (eventType: string, details?: Record<string, unknown>) =>

@@ -1,8 +1,10 @@
 import { BadRequestException, Controller, Logger, Post, Req } from '@nestjs/common';
 import '@fastify/multipart';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { FastifyRequest } from 'fastify';
 import { CsvImportService } from './csv-import.service';
-import { RealmImportService } from './realm-import.service';
+import { AppConfigService } from '../config/app-config.service';
 
 @Controller('api/import')
 export class ImportController {
@@ -10,7 +12,7 @@ export class ImportController {
 
   constructor(
     private readonly csv: CsvImportService,
-    private readonly realm: RealmImportService,
+    private readonly config: AppConfigService,
   ) {}
 
   @Post('upload')
@@ -27,13 +29,20 @@ export class ImportController {
     }
 
     if (filename.toLowerCase().endsWith('.realm')) {
-      try {
-        const result = await this.realm.importBuffer(buffer, filename);
-        return { type: 'realm', ...result };
-      } catch (err) {
-        // e.g. the optional native `realm` module isn't installed in this env.
-        throw new BadRequestException((err as Error).message);
-      }
+      // `realm` is a heavy, deprecated native module kept OUT of the served
+      // backend (ADR 0007). Persist the upload into the data volume so an
+      // operator can run the offline `realm-import` Nx target against the DB;
+      // see src/data-import/README.md.
+      const dir = path.resolve(this.config.realmDir);
+      fs.mkdirSync(dir, { recursive: true });
+      const stored = path.join(dir, path.basename(filename));
+      fs.writeFileSync(stored, buffer);
+      this.logger.log(`Realm upload ${filename} stored at ${stored} (offline import pending)`);
+      return {
+        type: 'realm',
+        message: 'Realm-файл сохранён. Импорт выполняется офлайн администратором (см. data-import/README.md).',
+        stored,
+      };
     }
 
     throw new BadRequestException('Unsupported file type (expected .csv or .realm)');

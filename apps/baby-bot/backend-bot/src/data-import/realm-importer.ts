@@ -45,7 +45,9 @@ export async function loadRealm(): Promise<RealmModule> {
     const mod = (await import(specifier as string)) as { default?: RealmModule } & RealmModule;
     return (mod.default ?? mod) as RealmModule;
   } catch {
-    throw new Error('Realm import is unavailable: the `realm` package is not installed. Run `pnpm add -w realm` to enable it.');
+    // Latest `realm` (v20) is React-Native only; the last Node-capable line is
+    // realm@12 (it fetches a Node prebuild from static.realm.io at install).
+    throw new Error('Realm import is unavailable: the `realm` package is not installed. Run `pnpm add -w realm@12` to enable it (Node-only build).');
   }
 }
 

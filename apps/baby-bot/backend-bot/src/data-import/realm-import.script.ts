@@ -2,10 +2,11 @@
  * One-shot Realm → Postgres importer, run via:
  *   pnpm nx run baby-bot-backend-bot:realm-import
  *
- * Batch sibling of the upload-triggered `RealmImportService`: both share the
- * mapping (`realm-mapper.ts`) and import loop (`realm-importer.ts`). `realm` is
- * a heavy native module kept OUT of the served bundle and loaded lazily (see
- * ADR 0007); install it (`pnpm add -w realm`) to run this.
+ * Offline, one-time historical migration. `realm` is a heavy, deprecated native
+ * module kept OUT of the served backend (ADR 0007) and loaded lazily here; the
+ * shared mapping (`realm-mapper.ts`) and import loop (`realm-importer.ts`) are
+ * only used from this entrypoint. Install the Node-capable build first:
+ * `pnpm add -w realm@12`. See `README.md` for the full procedure.
  */
 import * as path from 'path';
 import { PrismaClient } from '../generated/client';

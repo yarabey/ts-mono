@@ -26,7 +26,7 @@ Approve these runtime dependencies for `baby-bot` only:
 | --- | --- | --- |
 | `node-telegram-bot-api` | Behaviour parity for the Telegram bot (polling, commands, voice download). Re-implementing the Bot API by hand is high-risk churn. | Used only in `telegram.service.ts`; bot init is config-gated (no token → bot disabled). Flagged for future review vs. `grammy`/native HTTP. |
 | `socks-proxy-agent` | The bot reaches Telegram through a SOCKS5 proxy in the deployment environment. | Used only when `TELEGRAM_SOCKS5_PROXY` is set. Ambient type shim; resolved at runtime/build. |
-| `realm` | Historical import from legacy Realm mobile DB files. Heavy native module. | **Not** a bundled runtime app dependency: marked `external` in `project.json` and loaded via a non-literal dynamic `import()` (`realm-importer.ts`) so it is never statically bundled and is optional to install. The shared import loop is invoked from both the `realm-import` Nx target (batch) and the `/api/import/upload` endpoint (single file via `RealmImportService`); when the module isn't installed, both fail with a clear message instead of crashing. |
+| `realm` | One-shot historical import from legacy Realm mobile DB files. Heavy, deprecated native module (~1 GB installed; the Node-only build is `realm@12`, whose binary is fetched from `static.realm.io` at install). | **Not** a runtime app dependency: marked `external` in `project.json`, loaded via a non-literal dynamic `import()` (`realm-importer.ts`) so it is never statically bundled, and run **only** offline via the `realm-import` Nx target — never from the served backend or the deployed Mini App. Optional to install (`pnpm add -w realm@12`). See `src/data-import/README.md`. |
 
 NestJS-ecosystem additions (`@nestjs/jwt`, `@nestjs/config`, `@nestjs/schedule`,
 `@fastify/multipart`, plus `fastify` made an explicit dep for type resolution)
@@ -37,9 +37,10 @@ separate ADR.
 
 - `node-telegram-bot-api` and `socks-proxy-agent` ship in the served backend
   bundle but are inert without their env config.
-- `realm` is never bundled into the served backend; importing it (via the Nx
-  target or the upload endpoint) requires the optional module to be installed,
-  otherwise the import fails with an actionable message.
+- `realm` is never bundled into the served backend, nor installed in its
+  container; the deployed Mini App's import is CSV-only. Realm import is an
+  offline/admin operation run via the `realm-import` Nx target against the DB
+  (see `src/data-import/README.md`), keeping the always-on server slim.
 - CI (`GitHub Actions spending limit: $0`) runs lint/test/build only; all
   external integrations (Telegram/ZAI/Whisper/Realm) are mocked or gated in
   tests, never called live.

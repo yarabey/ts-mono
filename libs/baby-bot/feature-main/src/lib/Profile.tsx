@@ -272,7 +272,11 @@ export function Profile() {
             </LoadingButton>
             <div className={styles.field}>
               <label className={styles.label}>Импорт (CSV / Realm)</label>
-              <input className={styles.input} type="file" accept=".csv,.realm" onChange={(e) => onImportFile(e.target.files?.[0])} />
+              {/* No `accept` filter: Telegram's in-app WebView greys out files
+                  with unknown extensions (.realm), so we allow any file and
+                  validate the extension on the server. */}
+              <input className={styles.input} type="file" onChange={(e) => onImportFile(e.target.files?.[0])} />
+              <div className={styles.hint}>Поддерживаются файлы .csv и .realm</div>
               {importUpload.isPending && <div className={styles.hint}>Импортируется…</div>}
             </div>
           </section>

@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/app-config.service';
 import { RawEntriesService } from '../raw-entries/raw-entries.service';
 import { TelegramService } from '../telegram/telegram.service';
-import { keysToSnake } from '../common/case';
+import { keysToSnake, toUtcDate } from '../common/case';
 import { detailDelegate } from '../common/prisma-delegate';
 import {
   buildDetailData,
@@ -181,12 +181,14 @@ ${pendingSection}
 ### Правила
 1. Одна запись может содержать несколько событий (например «покормили и уснула»).
 2. Сначала проверь, не является ли текст продолжением открытого события.
-3. Время: если указано точное — используй его, если нет — используй recorded_at. Формат ISO 8601 с T-разделителем (2025-01-15T14:30:00).
+3. Время: если указано точное — используй его, если нет — используй recorded_at. ВСЕ времена в этом промпте даны в UTC; возвращай время тоже в UTC в полном формате ISO 8601 с суффиксом Z, например 2025-01-15T14:30:00Z. Суффикс Z обязателен — время без него будет отклонено. Не придумывай несуществующие даты; если время неизвестно, копируй recorded_at как есть.
 4. Если не удалось классифицировать — сохраняй как note (event_type: "note", details не нужны).
 5. Если текст не содержит событий или бессмысленный — НЕ создавай операций.
 6. Если текст содержит число+единицы (мл, мин, кг, см) — это скорее всего событие. Создавай операцию.
 7. Если текст описывает действие с ребёнком — ВСЕГДА создавай событие, даже если не уверен в типе.
 8. Если не уверен — создавай как note, не пропускай.
+9. event_type — строго одно из: feeding, sleep, diaper, growth, health, milestone, note, pumping, bath, walk, weight, mood. Другие значения недопустимы; если ничего не подходит — используй note.
+10. Числовые поля (duration_min, amount_ml, weight_kg, height_cm, head_circumference_cm, value) — только число, без единиц измерения и без кавычек (например 120, а не "120 мл"). Используй точку как десятичный разделитель.
 
 ### Паттерны продолжения (UPDATE вместо INSERT)
 - «проснулась», «встала», «не уснула» → найти открытое sleep, проставить ended_at и duration_min
@@ -266,7 +268,7 @@ ${pendingSection}
       const counts = new Map<number, number>();
       for (const op of operations) {
         if (op.action === 'create_event') {
-          const occurredAt = new Date(op.event.occurred_at);
+          const occurredAt = toUtcDate(op.event.occurred_at) ?? new Date();
           const event = await tx.event.create({
             data: {
               childId: op.event.child_id,

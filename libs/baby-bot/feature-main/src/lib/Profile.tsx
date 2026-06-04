@@ -23,6 +23,37 @@ import styles from './Profile.module.css';
 const APP_VERSION = 'baby-bot v2.0';
 const DEFAULT_THRESHOLDS = { feeding_min: 180, diaper_min: 240, wake_min: 150 };
 
+/** Zones offered for CSV import (the file's timestamps are wall-clock with no
+ * offset, so the user tells us which zone they were recorded in). */
+const TIMEZONE_OPTIONS = [
+  'Europe/Kaliningrad',
+  'Europe/Moscow',
+  'Europe/Samara',
+  'Asia/Yekaterinburg',
+  'Asia/Omsk',
+  'Asia/Krasnoyarsk',
+  'Asia/Irkutsk',
+  'Asia/Yakutsk',
+  'Asia/Vladivostok',
+  'Asia/Magadan',
+  'Asia/Kamchatka',
+  'Europe/London',
+  'Europe/Berlin',
+  'America/New_York',
+  'UTC',
+];
+
+/** The browser's zone is the most likely answer, so it leads the list. */
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+const IMPORT_TZ_OPTIONS = Array.from(new Set([browserTimeZone(), ...TIMEZONE_OPTIONS]));
+
 export function Profile() {
   const navigate = useNavigate();
   const addToast = useUiStore((s) => s.addToast);
@@ -43,6 +74,7 @@ export function Profile() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   const [exporting, setExporting] = useState(false);
+  const [importTz, setImportTz] = useState(IMPORT_TZ_OPTIONS[0]);
 
   useEffect(() => {
     if (child) {
@@ -125,7 +157,7 @@ export function Profile() {
 
   const onImportFile = (file: File | undefined) => {
     if (!file) return;
-    importUpload.mutate(file, {
+    importUpload.mutate({ file, timeZone: importTz }, {
       onSuccess: (res) => {
         const r = (res ?? {}) as { inserted?: number; updated?: number; errors?: string[] };
         const errors = r.errors?.length ?? 0;
@@ -272,6 +304,21 @@ export function Profile() {
             </LoadingButton>
             <div className={styles.field}>
               <label className={styles.label}>Импорт CSV</label>
+              <label className={styles.label} htmlFor="import-tz">
+                Часовой пояс времени в файле
+              </label>
+              <select
+                id="import-tz"
+                className={styles.input}
+                value={importTz}
+                onChange={(e) => setImportTz(e.target.value)}
+              >
+                {IMPORT_TZ_OPTIONS.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
               <input className={styles.input} type="file" accept=".csv" onChange={(e) => onImportFile(e.target.files?.[0])} />
               <div className={styles.hint}>Поддерживается файл .csv</div>
               {importUpload.isPending && <div className={styles.hint}>Импортируется…</div>}

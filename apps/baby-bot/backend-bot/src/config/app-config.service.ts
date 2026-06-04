@@ -78,6 +78,13 @@ export class AppConfigService {
   get realmDir(): string {
     return this.str('REALM_DIR', './data/realm');
   }
+
+  /** IANA zone the directory-scan CSV importer assumes its naive timestamps are
+   * recorded in. Defaults to the server `TZ`, then UTC. The upload endpoint
+   * overrides this per-request with the zone chosen in the UI. */
+  get importTimeZone(): string {
+    return this.str('IMPORT_TZ') || this.str('TZ') || 'UTC';
+  }
   get uploadsDir(): string {
     return this.str('UPLOADS_DIR', './data/uploads');
   }

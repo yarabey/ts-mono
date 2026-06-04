@@ -6,8 +6,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/app-config.service';
 import { detailDelegate } from '../common/prisma-delegate';
 import { buildDetailData, DETAIL_DELEGATE } from '../events/event-mapper';
-import { CsvRow, EVENT_MAP, mapDetails, parseCsv, rowHash, toIso, uniqueKey } from './csv-mapper';
+import { CsvRow, EVENT_MAP, mapDetails, parseCsv, rowHash, uniqueKey, zonedNaiveToUtc } from './csv-mapper';
 import type { EventType } from '@acme/baby-bot-domain';
+
+/** Fallback when no zone is supplied: preserves the historical behaviour of
+ * treating naive CSV datetimes as UTC. */
+const DEFAULT_TZ = 'UTC';
 
 export interface ImportResult {
   filesProcessed: number;
@@ -27,8 +31,10 @@ export class CsvImportService {
     private readonly config: AppConfigService,
   ) {}
 
-  /** Import a single CSV buffer (used by the upload endpoint). */
-  async importBuffer(content: string, fileName: string, childId = 1): Promise<ImportResult> {
+  /** Import a single CSV buffer (used by the upload endpoint). `timeZone` is an
+   * IANA zone (e.g. `Europe/Moscow`) identifying the wall-clock zone the CSV
+   * timestamps are recorded in; they are converted to UTC for storage. */
+  async importBuffer(content: string, fileName: string, childId = 1, timeZone = DEFAULT_TZ): Promise<ImportResult> {
     const result: ImportResult = { filesProcessed: 1, rowsTotal: 0, inserted: 0, updated: 0, skipped: 0, errors: [] };
     const rows = parseCsv(content);
     result.rowsTotal = rows.length;
@@ -39,7 +45,7 @@ export class CsvImportService {
         continue;
       }
       try {
-        const outcome = await this.processRow(row, fileName, childId);
+        const outcome = await this.processRow(row, fileName, childId, timeZone);
         result[outcome]++;
       } catch (err) {
         result.errors.push(`Row ${row.datetime} ${row.event}: ${(err as Error).message}`);
@@ -48,11 +54,26 @@ export class CsvImportService {
     return result;
   }
 
-  private async processRow(row: CsvRow, fileName: string, childId: number): Promise<'inserted' | 'updated' | 'skipped'> {
+  private async processRow(
+    row: CsvRow,
+    fileName: string,
+    childId: number,
+    timeZone: string,
+  ): Promise<'inserted' | 'updated' | 'skipped'> {
     const mapped = mapDetails(row);
+    // Convert every naive timestamp (event time + detail start/end) from the
+    // source zone to UTC so all of an event's instants stay consistent and land
+    // on the correct calendar day when rendered back in the user's zone.
+    for (const field of ['started_at', 'ended_at'] as const) {
+      const v = mapped.details?.[field];
+      if (typeof v === 'string') {
+        const utc = zonedNaiveToUtc(v, timeZone);
+        mapped.details![field] = utc ? utc.toISOString() : null;
+      }
+    }
     const key = uniqueKey(row);
-    const hash = rowHash(row);
-    const occurredAt = new Date(toIso(row.datetime));
+    const hash = rowHash(row, timeZone);
+    const occurredAt = zonedNaiveToUtc(row.datetime, timeZone) ?? new Date(row.datetime.replace(' ', 'T'));
     const note = mapped.note || row.comment || null;
     const delegate = DETAIL_DELEGATE[mapped.eventType as EventType];
 
@@ -103,7 +124,7 @@ export class CsvImportService {
       const state = await this.prisma.csvImportState.findUnique({ where: { fileName } });
       if (state && Number(state.lastMtimeMs) >= mtime) continue;
 
-      const fileResult = await this.importBuffer(fs.readFileSync(filePath, 'utf-8'), fileName, childId);
+      const fileResult = await this.importBuffer(fs.readFileSync(filePath, 'utf-8'), fileName, childId, this.config.importTimeZone);
       await this.prisma.csvImportState.upsert({
         where: { fileName },
         update: { lastMtimeMs: BigInt(mtime) },

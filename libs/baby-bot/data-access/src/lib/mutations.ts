@@ -116,7 +116,7 @@ export function useUpdateSetting() {
 export function useImportUpload() {
   const invalidate = useInvalidateEvents();
   return useMutation({
-    mutationFn: (file: File) => api.import.upload(file),
+    mutationFn: (vars: { file: File; timeZone?: string }) => api.import.upload(vars.file, vars.timeZone),
     onSuccess: invalidate,
   });
 }

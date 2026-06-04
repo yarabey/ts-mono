@@ -1,4 +1,4 @@
-import { parseCsv, mapDetails, uniqueKey, rowHash, EVENT_MAP } from './csv-mapper';
+import { parseCsv, mapDetails, uniqueKey, rowHash, EVENT_MAP, zonedNaiveToUtc } from './csv-mapper';
 
 const CSV = [
   'Дата и время,Событие,Тип,Значение,Значение.Число,Начало,Окончание,Комментарий',
@@ -68,6 +68,21 @@ describe('mapDetails', () => {
     expect(d.duration_min).toBe(45);
   });
 
+  it('maps a bath (Купание) with start/end', () => {
+    const [row] = parseCsv(
+      [
+        'Дата и время,Событие,Тип,Значение,Значение.Число,Начало,Окончание,Комментарий',
+        '2026-06-01 20:36:07,Купание,,,,2026-06-01 20:36:00,2026-06-01 20:51:00,',
+      ].join('\n'),
+    );
+    const m = mapDetails(row);
+    expect(m.eventType).toBe('bath');
+    const d = m.details as Record<string, string | number>;
+    expect(d.started_at).toBe('2026-06-01T20:36:00');
+    expect(d.ended_at).toBe('2026-06-01T20:51:00');
+    expect(d.duration_min).toBe(15);
+  });
+
   it('preserves start/end for pumping and derives its duration', () => {
     const [row] = parseCsv(
       [
@@ -99,5 +114,33 @@ describe('EVENT_MAP', () => {
   it('recognizes known Russian event labels', () => {
     expect(EVENT_MAP['Кормление грудью']).toBe('feeding');
     expect(EVENT_MAP['Прогулка']).toBe('walk');
+  });
+
+  it('maps Купание (bath) so it is not rejected as an unknown event', () => {
+    expect(EVENT_MAP['Купание']).toBe('bath');
+  });
+});
+
+describe('zonedNaiveToUtc', () => {
+  it('interprets a naive datetime as wall-clock in the given zone', () => {
+    // 23:19 in Moscow (UTC+3) is 20:19 UTC the same day.
+    expect(zonedNaiveToUtc('2026-06-03 23:19:14', 'Europe/Moscow').toISOString()).toBe('2026-06-03T20:19:14.000Z');
+  });
+
+  it('keeps the value as UTC when the zone is UTC', () => {
+    expect(zonedNaiveToUtc('2026-06-03 23:19:14', 'UTC').toISOString()).toBe('2026-06-03T23:19:14.000Z');
+  });
+
+  it('shifts late-evening events back a day for positive offsets', () => {
+    // 00:30 next-day Moscow time is 21:30 of the previous day in UTC.
+    expect(zonedNaiveToUtc('2026-06-04 00:30:00', 'Europe/Moscow').toISOString()).toBe('2026-06-03T21:30:00.000Z');
+  });
+
+  it('falls back to UTC for an unknown zone', () => {
+    expect(zonedNaiveToUtc('2026-06-03 23:19:14', 'Not/AZone').toISOString()).toBe('2026-06-03T23:19:14.000Z');
+  });
+
+  it('returns null for unparseable input', () => {
+    expect(zonedNaiveToUtc('', 'UTC')).toBeNull();
   });
 });

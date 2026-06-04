@@ -88,14 +88,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy compose file to server
+      - name: Copy compose file (+ any infra scripts) to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          source: ${{ inputs.infra_dir }}/docker-compose.yml
+          # The whole infra dir: docker-compose.yml plus any operational scripts
+          # a product ships (e.g. baby-bot's backup-offsite.sh / restore.sh) and
+          # its .env.example. Always matches (compose file is always present).
+          source: ${{ inputs.infra_dir }}/*
           target: ${{ inputs.deploy_path }}
           strip_components: 2 # drop the `infra/<product>/` prefix
 

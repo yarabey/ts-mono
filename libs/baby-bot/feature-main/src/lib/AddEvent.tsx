@@ -7,7 +7,7 @@ import {
   usePhotoUpload,
   useUpdateEvent,
 } from '@acme/baby-bot-data-access';
-import { LoadingButton, TimeInput, notificationError, notificationSuccess, useUiStore } from '@acme/baby-bot-ui';
+import { DateInput, LoadingButton, TimeInput, notificationError, notificationSuccess, useUiStore } from '@acme/baby-bot-ui';
 import {
   BOTTLE_CONTENT_LABELS,
   BOTTLE_CONTENTS,
@@ -29,6 +29,7 @@ import {
   resolveEventTiming,
   SLEEP_QUALITY_LABELS,
   SLEEP_TYPE_LABELS,
+  TIMED_EVENT_TYPES,
   toLocalDateTimeInput,
 } from '@acme/baby-bot-domain';
 import styles from './AddEvent.module.css';
@@ -95,7 +96,20 @@ const defaultForm = (): FormData => ({
 
 const localToIso = (local: string) => (local ? new Date(local).toISOString() : undefined);
 const hhmm = (local: string) => local.slice(11, 16);
+const ymd = (local: string) => local.slice(0, 10);
 const withTime = (local: string, time: string) => local.slice(0, 11) + time;
+const withDate = (local: string, date: string) => date + local.slice(10);
+
+/** Resolve a timed event's end timestamp, rolling to the next day when the end
+ * clock-time falls before the start (an overnight interval, e.g. a night sleep
+ * that starts at 23:30 on the picked date and ends at 01:00). */
+const endToIso = (start: string, end: string) => {
+  if (!start || !end) return localToIso(end);
+  const startMs = new Date(start).getTime();
+  let endMs = new Date(end).getTime();
+  if (endMs < startMs) endMs += 86400000;
+  return new Date(endMs).toISOString();
+};
 
 interface OptProps {
   active: boolean;
@@ -176,6 +190,19 @@ export function AddEvent() {
   const update = (field: keyof FormData, value: string) => setForm((p) => ({ ...p, [field]: value }));
   const toggleOpen = () => setForm((p) => ({ ...p, is_open: !p.is_open }));
 
+  // A single date applies to every timestamp the event carries; the time-of-day
+  // pickers stay untouched. Overnight intervals are reconciled at save time.
+  const setEventDate = (date: string) =>
+    setForm((p) => ({
+      ...p,
+      occurred_at: withDate(p.occurred_at, date),
+      started_at: withDate(p.started_at, date),
+      ended_at: withDate(p.ended_at, date),
+    }));
+
+  const timed = TIMED_EVENT_TYPES.includes(eventType);
+  const eventDate = timed ? ymd(form.started_at) : ymd(form.occurred_at);
+
   const buildPayload = (): CreateEventPayload => {
     const base: CreateEventPayload = {
       event_type: eventType,
@@ -195,7 +222,7 @@ export function AddEvent() {
           amount_ml: form.amount_ml ? parseInt(form.amount_ml, 10) : undefined,
           food_name: form.food_name || undefined,
           started_at: form.is_open ? localToIso(form.occurred_at) : localToIso(form.started_at),
-          ended_at: form.is_open ? undefined : localToIso(form.ended_at),
+          ended_at: form.is_open ? undefined : endToIso(form.started_at, form.ended_at),
         };
         break;
       }
@@ -203,7 +230,7 @@ export function AddEvent() {
         details = {
           sleep_type: form.sleep_type,
           started_at: localToIso(form.started_at),
-          ended_at: form.is_open ? undefined : localToIso(form.ended_at),
+          ended_at: form.is_open ? undefined : endToIso(form.started_at, form.ended_at),
           quality: form.is_open ? undefined : form.quality,
         };
         break;
@@ -237,14 +264,14 @@ export function AddEvent() {
           breast_side: form.breast_side,
           amount_ml: form.amount_ml ? parseInt(form.amount_ml, 10) : undefined,
           started_at: form.is_open ? localToIso(form.occurred_at) : localToIso(form.started_at),
-          ended_at: form.is_open ? undefined : localToIso(form.ended_at),
+          ended_at: form.is_open ? undefined : endToIso(form.started_at, form.ended_at),
         };
         break;
       case 'walk':
       case 'bath':
         details = {
           started_at: form.is_open ? localToIso(form.occurred_at) : localToIso(form.started_at),
-          ended_at: form.is_open ? undefined : localToIso(form.ended_at),
+          ended_at: form.is_open ? undefined : endToIso(form.started_at, form.ended_at),
         };
         break;
       case 'note':
@@ -673,6 +700,11 @@ export function AddEvent() {
       </div>
 
       <div className={styles.body}>
+        <div className={styles.group}>
+          <label className={styles.label}>Дата</label>
+          <DateInput value={eventDate} onChange={setEventDate} />
+        </div>
+
         {RENDERERS[eventType]?.()}
 
         {eventType !== 'note' && eventType !== 'mood' && (

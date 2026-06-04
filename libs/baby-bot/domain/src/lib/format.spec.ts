@@ -4,10 +4,34 @@ import {
   eventSummary,
   eventLabel,
   ageFromBirth,
+  formatDate,
   isOpenEvent,
+  localDayKey,
   resolveEventTiming,
 } from './format.js';
 import type { Event } from './events.js';
+
+describe('localDayKey', () => {
+  it('groups by the local calendar day, not the UTC day', () => {
+    // 01:00 local is always the same calendar day regardless of timezone, but a
+    // naive `iso.slice(0, 10)` would return the UTC day and shift early-morning
+    // events (e.g. before 03:00 MSK) into the previous day.
+    const local = new Date(2026, 5, 4, 1, 0, 0); // June 4, 01:00 local time
+    expect(localDayKey(local.toISOString())).toBe('2026-06-04');
+  });
+
+  it('keeps late-evening events on the same local day', () => {
+    const local = new Date(2026, 5, 4, 23, 30, 0); // June 4, 23:30 local time
+    expect(localDayKey(local.toISOString())).toBe('2026-06-04');
+  });
+});
+
+describe('formatDate', () => {
+  it('renders a bare YYYY-MM-DD day key as that exact local day', () => {
+    // Parsing the key as UTC midnight would render the previous day west of UTC.
+    expect(formatDate('2026-06-04')).toBe('4 июня 2026 г.');
+  });
+});
 
 describe('formatDuration', () => {
   it('formats minutes into ч/м', () => {

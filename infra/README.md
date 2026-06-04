@@ -132,6 +132,63 @@ curl -kI https://<domain>:8443/mini-app/        # 200, valid LE cert
 docker compose logs backend | tail              # "baby-bot backend listening on :3100"
 ```
 
+## Backups (baby-bot)
+
+Daily logical backups run as the `pg-backup` sidecar in the compose stack
+([ADR 0009](../docs/adr/0009-baby-bot-db-backups.md); off-allowlist image
+`prodrigestivill/postgres-backup-local`). It dumps `baby_bot`, gzips, and
+rotates daily/weekly/monthly under `/opt/baby-bot/backups`. Retention/schedule
+are tuned via the optional `BACKUP_*`/`SCHEDULE`/`TZ` env (see
+[`baby-bot/.env.example`](baby-bot/.env.example)); all have sane defaults.
+
+```bash
+cd /opt/baby-bot
+docker compose ps pg-backup                 # healthy
+ls -R backups                               # daily/ weekly/ monthly/ *.sql.gz
+docker compose logs pg-backup | tail        # last run
+```
+
+### Offsite copy to a remote host
+
+A backup on the same box as the DB doesn't survive losing that box, so push the
+dumps offsite to any remote host you control. `backup-offsite.sh` (shipped to
+`/opt/baby-bot` by the deploy workflow) rsyncs the backup tree to the remote
+over SSH. It is **append-only** (no `--delete`) so a wipe of the prod backups
+can't propagate offsite. One-time setup on the **prod** server:
+
+```bash
+# 1. Dedicated key for the offsite push
+ssh-keygen -t ed25519 -f ~/.ssh/babybot_offsite -N ""
+# 2. Install ~/.ssh/babybot_offsite.pub in the remote host's authorized_keys
+#    (use a dedicated low-priv user; lock the key to rsync if you can).
+# 3. Make the script executable and try it once
+chmod +x /opt/baby-bot/backup-offsite.sh
+REMOTE_USER=backup REMOTE_HOST=<remote-host> REMOTE_DIR=/home/backup/baby-bot \
+  /opt/baby-bot/backup-offsite.sh
+# 4. Cron it ~an hour after the @daily sidecar dump (which runs at 00:00):
+crontab -e
+#   30 1 * * *  REMOTE_USER=backup REMOTE_HOST=<remote-host> REMOTE_DIR=/home/backup/baby-bot \
+#     /opt/baby-bot/backup-offsite.sh >> /var/log/babybot-offsite.log 2>&1
+```
+
+Because the push is append-only, prune the **remote** on its own schedule (cron
+on the remote host), keeping a longer window than the prod copy, e.g.:
+
+```bash
+find /home/backup/baby-bot -name '*.sql.gz' -mtime +90 -delete
+```
+
+### Restore
+
+```bash
+cd /opt/baby-bot
+./restore.sh backups/daily/baby_bot-YYYYMMDD-HHMMSS.sql.gz
+```
+
+It stops the backend, loads the dump (dumped with `--clean --if-exists`, so it
+drops & recreates objects), and restarts the backend. **Test restores
+periodically** — an untested backup is not a backup.
+
 ## Onboarding a new product
 
 1. Add `infra/<product>/docker-compose.yml` (+ `.env.example`).

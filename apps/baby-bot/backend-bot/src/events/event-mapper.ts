@@ -1,5 +1,5 @@
 import type { Event as ApiEvent, EventType } from '@acme/baby-bot-domain';
-import { isoOrNull, keysToCamel, keysToSnake } from '../common/case';
+import { isoOrNull, keysToCamel, keysToSnake, toUtcDate } from '../common/case';
 
 /** Event types that carry a typed detail row, mapped to the Event relation
  * field name (same as the Prisma delegate, lower-cased). */
@@ -70,9 +70,24 @@ export const EVENT_INCLUDE = {
   rawEntry: { select: { emoji: true } },
 } as const;
 
-/** Build camelCased Prisma create data for a typed detail row. */
+/** Detail columns that map to Prisma `DateTime` fields (camelCase). */
+const DATETIME_DETAIL_FIELDS = ['startedAt', 'endedAt'] as const;
+
+/** Build camelCased Prisma create data for a typed detail row. Datetime
+ * columns are coerced to `Date` objects so Prisma never receives a bare
+ * timezone-less string (e.g. an AI-produced "2026-06-04T05:23:04"), which it
+ * rejects as non-ISO-8601. Unparseable timestamps are dropped rather than
+ * forwarded — for `started_at` this lets the caller fall back to the event's
+ * `occurred_at`. */
 export function buildDetailData(details: Record<string, unknown>): Record<string, unknown> {
-  return keysToCamel(details);
+  const data = keysToCamel(details);
+  for (const field of DATETIME_DETAIL_FIELDS) {
+    if (data[field] == null) continue;
+    const parsed = toUtcDate(data[field]);
+    if (parsed) data[field] = parsed;
+    else delete data[field];
+  }
+  return data;
 }
 
 /** Strip Prisma bookkeeping fields and convert a detail row to the API's

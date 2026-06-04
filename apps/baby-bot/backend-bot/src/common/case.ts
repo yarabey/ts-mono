@@ -36,3 +36,21 @@ export function keysToSnake(
 export function isoOrNull(d: Date | null | undefined): string | null {
   return d ? d.toISOString() : null;
 }
+
+/**
+ * Coerce a wire datetime into a Date. A naked ISO datetime carrying no zone
+ * designator (e.g. "2026-06-04T05:23:04" — no trailing `Z`, no `±HH:MM`
+ * offset) is interpreted as UTC, matching the rest of the wire format. This
+ * keeps Prisma from ever seeing a string it rejects as non-ISO-8601 ("premature
+ * end of input"). Returns `null` for empty / unparseable input.
+ */
+export function toUtcDate(value: unknown): Date | null {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value !== 'string') return null;
+  const s = value.trim();
+  if (!s) return null;
+  const naked = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(s);
+  const d = new Date(naked ? `${s}Z` : s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}

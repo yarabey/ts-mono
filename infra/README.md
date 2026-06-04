@@ -125,31 +125,31 @@ ls -R backups                               # daily/ weekly/ monthly/ *.sql.gz
 docker compose logs pg-backup | tail        # last run
 ```
 
-### Offsite copy to the Finnish server
+### Offsite copy to a remote host
 
 A backup on the same box as the DB doesn't survive losing that box, so push the
-dumps offsite. `backup-offsite.sh` (shipped to `/opt/baby-bot` by the deploy
-workflow) rsyncs the backup tree to the Finnish server over SSH. It is
-**append-only** (no `--delete`) so a wipe of the prod backups can't propagate
-offsite. One-time setup on the **prod** server:
+dumps offsite to any remote host you control. `backup-offsite.sh` (shipped to
+`/opt/baby-bot` by the deploy workflow) rsyncs the backup tree to the remote
+over SSH. It is **append-only** (no `--delete`) so a wipe of the prod backups
+can't propagate offsite. One-time setup on the **prod** server:
 
 ```bash
 # 1. Dedicated key for the offsite push
 ssh-keygen -t ed25519 -f ~/.ssh/babybot_offsite -N ""
-# 2. Install ~/.ssh/babybot_offsite.pub in the Finnish server's authorized_keys
+# 2. Install ~/.ssh/babybot_offsite.pub in the remote host's authorized_keys
 #    (use a dedicated low-priv user; lock the key to rsync if you can).
 # 3. Make the script executable and try it once
 chmod +x /opt/baby-bot/backup-offsite.sh
-REMOTE_USER=backup REMOTE_HOST=<finnish-host> REMOTE_DIR=/home/backup/baby-bot \
+REMOTE_USER=backup REMOTE_HOST=<remote-host> REMOTE_DIR=/home/backup/baby-bot \
   /opt/baby-bot/backup-offsite.sh
 # 4. Cron it ~an hour after the @daily sidecar dump (which runs at 00:00):
 crontab -e
-#   30 1 * * *  REMOTE_USER=backup REMOTE_HOST=<finnish-host> REMOTE_DIR=/home/backup/baby-bot \
+#   30 1 * * *  REMOTE_USER=backup REMOTE_HOST=<remote-host> REMOTE_DIR=/home/backup/baby-bot \
 #     /opt/baby-bot/backup-offsite.sh >> /var/log/babybot-offsite.log 2>&1
 ```
 
 Because the push is append-only, prune the **remote** on its own schedule (cron
-on the Finnish server), keeping a longer window than the prod copy, e.g.:
+on the remote host), keeping a longer window than the prod copy, e.g.:
 
 ```bash
 find /home/backup/baby-bot -name '*.sql.gz' -mtime +90 -delete

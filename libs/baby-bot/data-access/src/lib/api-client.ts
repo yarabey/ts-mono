@@ -135,8 +135,11 @@ export const api = {
     update: (key: string, value: string) => request(`/api/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
   },
   import: {
-    upload: async (file: File): Promise<unknown> => {
+    upload: async (file: File, timeZone?: string): Promise<unknown> => {
       const form = new FormData();
+      // Append the zone before the file so the backend (which streams the file
+      // last) has the field parsed by the time it reads the upload.
+      if (timeZone) form.append('timeZone', timeZone);
       form.append('file', file);
       const token = getToken();
       const res = await fetch('/api/import/upload', {

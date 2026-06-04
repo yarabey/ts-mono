@@ -26,6 +26,7 @@ export const EVENT_MAP: Record<string, string> = {
   Вес: 'weight',
   Рост: 'growth',
   Прогулка: 'walk',
+  Купание: 'bath',
   Настроение: 'mood',
 };
 
@@ -88,8 +89,11 @@ export function uniqueKey(row: CsvRow): string {
   return `${row.datetime}|${row.event}|${row.type}`;
 }
 
-export function rowHash(row: CsvRow): string {
-  return crypto.createHash('md5').update(JSON.stringify(row)).digest('hex');
+/** Content hash for change detection. Includes the import `timeZone` so that
+ * re-importing the same file under a corrected zone is detected as a change
+ * (and the stored timestamps are recomputed) rather than skipped. */
+export function rowHash(row: CsvRow, timeZone = ''): string {
+  return crypto.createHash('md5').update(JSON.stringify({ ...row, _tz: timeZone })).digest('hex');
 }
 
 function num(val: string): number | null {
@@ -100,6 +104,47 @@ function num(val: string): number | null {
 
 export function toIso(dateTime: string): string {
   return dateTime.replace(' ', 'T');
+}
+
+/** Offset (ms) by which `timeZone` is ahead of UTC at the given UTC instant,
+ * or `null` if the zone is unknown/invalid. */
+function zoneOffsetMs(utcMs: number, timeZone: string): number | null {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const p: Record<string, string> = {};
+    for (const part of dtf.formatToParts(new Date(utcMs))) p[part.type] = part.value;
+    const hour = p.hour === '24' ? '00' : p.hour; // Intl can emit "24" for midnight
+    const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +hour, +p.minute, +p.second);
+    return asUtc - utcMs;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Interpret a timezone-naive datetime ("YYYY-MM-DD HH:mm:ss", with a space or
+ * `T` separator) as wall-clock time in `timeZone` and return the matching UTC
+ * instant. The source CSV records local wall-clock times with no zone, so
+ * without this every row was stored as if it were UTC — shifting events onto
+ * the wrong calendar day once rendered in the user's zone. Unknown zones (and
+ * unparseable input) fall back to treating the value as UTC.
+ */
+export function zonedNaiveToUtc(naive: string, timeZone: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec((naive ?? '').trim());
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s] = m;
+  const wallAsUtc = Date.UTC(+y, +mo - 1, +d, +h, +mi, s ? +s : 0);
+  const offset = zoneOffsetMs(wallAsUtc, timeZone);
+  return new Date(offset == null ? wallAsUtc : wallAsUtc - offset);
 }
 
 /** End = start + duration, so a timed event's end never collapses onto its
@@ -195,6 +240,19 @@ export function mapDetails(row: CsvRow): MappedRow {
       const ended = row.end ? toIso(row.end) : addMinIso(started, explicitDuration);
       return {
         eventType: 'walk',
+        details: {
+          duration_min: explicitDuration ?? diffMin(started, ended),
+          started_at: started,
+          ended_at: ended,
+        },
+      };
+    }
+    case 'Купание': {
+      const started = row.start ? toIso(row.start) : toIso(row.datetime);
+      const explicitDuration = valNum != null ? Math.round(valNum / 60) : null;
+      const ended = row.end ? toIso(row.end) : addMinIso(started, explicitDuration);
+      return {
+        eventType: 'bath',
         details: {
           duration_min: explicitDuration ?? diffMin(started, ended),
           started_at: started,

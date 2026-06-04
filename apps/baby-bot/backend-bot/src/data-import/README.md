@@ -12,9 +12,29 @@ Supported in the deployed Mini App and the backend:
   (`CsvImportService`, every 5 min) and on demand.
 
 Columns: `Дата и время, Событие, Тип, Значение, Значение.Число, Начало,
-Окончание, Комментарий`. Timed events (сон, прогулка, кормление грудью,
-сцеживание) keep their `Начало`/`Окончание`; when `Окончание` is empty the end
-is derived from start + duration (`csv-mapper.ts`).
+Окончание, Комментарий`. Timed events (сон, прогулка, купание, кормление
+грудью, сцеживание) keep their `Начало`/`Окончание`; when `Окончание` is empty
+the end is derived from start + duration (`csv-mapper.ts`).
+
+Recognised `Событие` values map to event types in `EVENT_MAP` (`csv-mapper.ts`):
+сцеживание, бутылочка, сон, подгузник, кормление грудью, вес, рост, прогулка,
+**купание** (bath), настроение. Anything else is reported as `Unknown event`
+and skipped.
+
+### Time zones
+
+The CSV stores **wall-clock** timestamps with no offset. The importer converts
+them to UTC using a zone you pick:
+
+- **Mini App** sends the chosen zone (defaults to the browser zone) as the
+  `timeZone` form field; the backend converts naive timestamps from that IANA
+  zone to UTC (`zonedNaiveToUtc`).
+- **`CSV_DIR` scan** uses the `IMPORT_TZ` env var (falls back to `TZ`, then
+  `UTC`).
+
+The import `timeZone` is folded into each row's change hash, so re-importing the
+same file under a corrected zone recomputes the stored timestamps instead of
+being skipped as unchanged.
 
 ## Realm import (offline / admin only)
 

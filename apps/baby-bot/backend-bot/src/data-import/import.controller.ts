@@ -22,8 +22,13 @@ export class ImportController {
     const filename = data.filename ?? 'upload';
     const buffer = await data.toBuffer();
 
+    // The mini-app sends the `timeZone` field (an IANA zone) ahead of the file,
+    // so it is already parsed onto `data.fields` by the time we read it.
+    const tzField = data.fields?.timeZone as { value?: string } | undefined;
+    const timeZone = tzField?.value?.trim() || undefined;
+
     if (filename.toLowerCase().endsWith('.csv')) {
-      const result = await this.csv.importBuffer(buffer.toString('utf-8'), filename);
+      const result = await this.csv.importBuffer(buffer.toString('utf-8'), filename, 1, timeZone);
       this.logger.log(`CSV upload ${filename}: +${result.inserted}/${result.updated} (${result.skipped} skipped)`);
       return { type: 'csv', ...result };
     }

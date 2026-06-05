@@ -10,6 +10,7 @@ export * from './lib/EventCard.js';
 export * from './lib/Toaster.js';
 export * from './lib/haptics.js';
 export * from './lib/TimeInput.js';
+export * from './lib/DateInput.js';
 export * from './lib/SmartAlerts.js';
 export * from './lib/RawEntryCard.js';
 export * from './lib/QuickFeedingSheet.js';

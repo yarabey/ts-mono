@@ -22,6 +22,7 @@ import {
   type EventType,
   formatDate,
   isOpenEvent,
+  localDayKey,
   type RawEntry,
 } from '@acme/baby-bot-domain';
 import styles from './Journal.module.css';
@@ -45,10 +46,6 @@ const FILTERS: { type: EventType | 'all'; label: string }[] = [
 type JournalItem =
   | { kind: 'event'; data: Event; date: string; ts: string }
   | { kind: 'raw'; data: RawEntry; date: string; ts: string };
-
-function dayKey(iso: string): string {
-  return iso.slice(0, 10);
-}
 
 export function Journal() {
   const navigate = useNavigate();
@@ -104,11 +101,11 @@ export function Journal() {
       if (seen.has(e.id)) continue;
       seen.add(e.id);
       const start = (e.details as { started_at?: string } | null)?.started_at || e.occurred_at;
-      items.push({ kind: 'event', data: e, date: dayKey(start), ts: start });
+      items.push({ kind: 'event', data: e, date: localDayKey(start), ts: start });
     }
     for (const r of rawEntries) {
       if (!showProcessed && r.status === 'processed') continue;
-      items.push({ kind: 'raw', data: r, date: dayKey(r.recorded_at), ts: r.recorded_at });
+      items.push({ kind: 'raw', data: r, date: localDayKey(r.recorded_at), ts: r.recorded_at });
     }
     items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 

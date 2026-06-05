@@ -15,13 +15,29 @@ export function formatDuration(minutes: number): string {
   return `${h}ч ${m}м`;
 }
 
+/** Parse an ISO timestamp or a bare `YYYY-MM-DD` day key into a Date.
+ * `new Date('2026-06-04')` is interpreted as UTC midnight, which shifts the
+ * calendar day in non-UTC timezones (e.g. it renders as the previous day west
+ * of UTC). Bare day keys are therefore parsed as *local* midnight instead. */
+function parseDateInput(iso: string): Date {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00`) : new Date(iso);
+}
+
 export function formatTime(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 export function formatDate(iso: string): string {
-  return RU_DATE.format(new Date(iso));
+  return RU_DATE.format(parseDateInput(iso));
+}
+
+/** Calendar day (`YYYY-MM-DD`) of an ISO timestamp in the *local* timezone.
+ * A plain `iso.slice(0, 10)` returns the UTC day, which pushes early-morning
+ * events (e.g. anything before 03:00 in MSK / UTC+3) into the previous day. */
+export function localDayKey(iso: string): string {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 export function formatDateTime(iso: string): string {
